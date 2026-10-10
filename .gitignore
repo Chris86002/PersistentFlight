@@ -22,3 +22,4 @@ Source/**/PF-*/
 Source/**/installer-tests/
 Source/**/release/*-installer-tests/
 Source/**/mission-control/*.py
+Source/**/*-result.txt

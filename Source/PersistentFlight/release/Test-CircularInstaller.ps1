@@ -1,7 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$PackageRoot,[Parameter(Mandatory=$true)][string]$KspFixtureRoot,[Parameter(Mandatory=$true)][string]$PreviousPackageRoot)
 $ErrorActionPreference='Stop'
 $PackageRoot=[IO.Path]::GetFullPath($PackageRoot)
-$testRoot=Join-Path $PSScriptRoot ('circular-installer-tests/'+[Guid]::NewGuid().ToString('N'))
+$testRoot=Join-Path ([IO.Path]::GetTempPath()) ('PF-Circular-Installer-Tests/'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $nativeRoot=[IO.Path]::GetFullPath($KspFixtureRoot)
 $manifest=Get-Content -LiteralPath (Join-Path $PackageRoot 'payload-manifest.json') -Raw | ConvertFrom-Json
@@ -71,7 +71,14 @@ $wrongVersion=Fixture 'Wrong game version'
 [IO.File]::WriteAllText((Join-Path $wrongVersion 'buildID64.txt'),'build id = 03173')
 Assert ((Run $wrongVersion Install 1) -like '*KSP 1.12.5*') 'unsupported game version rejected'
 $badPackage=Join-Path $testRoot 'Damaged package'
-Copy-Item -LiteralPath $PackageRoot -Destination $badPackage -Recurse
+New-Item -ItemType Directory -Path $badPackage -Force | Out-Null
+# Copy only installer inputs: a source checkout may also contain test evidence,
+# game fixture directories, or Git metadata that must not enter this fixture.
+foreach($relative in @('Setup.ps1','payload-manifest.json') + @($manifest.Files | ForEach-Object {$_.File})){
+    $target=Join-Path $badPackage $relative
+    New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PackageRoot $relative) -Destination $target
+}
 Add-Content -LiteralPath (Join-Path $badPackage 'Ships/Script/pf_rover_resumable.ks') -Value '// damaged'
 $badDest=Fixture 'Damaged package target'
 Assert ((Run $badDest Install 1 $badPackage) -like '*missing or damaged*') 'package corruption rejected'
