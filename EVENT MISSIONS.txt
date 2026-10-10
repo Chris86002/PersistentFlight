@@ -1,0 +1,117 @@
+PersistentFlight 0.16 experimental — event missions and mission timeline
+
+Open PF -> Event missions / Timeline. Pick the source CPU and target CPU,
+event name, action, task/message, and optional success event. Set wait and
+action timeouts in GAME universal-time seconds, then Arm mission step.
+Rules follow CPU flight part IDs across vessel separation. Arm in flight,
+before the event happens. Existing events do not trigger newly armed rules.
+The source and target may be different ships. Only loaded armed CPUs are
+offered by the editor; saved rules keep their identities when ships unload.
+
+A step moves Waiting -> Ready -> Running -> Complete or Failed. Steps run
+once per retained rule ID. More than one step can wait on the same event.
+Only one Running action owns a target CPU at a time; ready steps wait their
+turn. Their action deadlines begin when the source event fires, so waiting
+for a loaded CPU or an idle handler counts toward the action timeout.
+
+ACTIONS
+Send task to kOS: requires a cooperating handler already running on the
+target CPU. PF does not start arbitrary programs or replace guidance.
+Show notification: displays the message and completes immediately.
+Hold mission: uses the existing mission hold and engine shutdown behavior.
+It does not freeze a craft's motion; cooperating rover scripts brake.
+Timeout/failure can request a target mission hold. If the CPU is unloaded,
+the hold remains pending until it becomes loaded and unpacked. A pending
+hold and a failed step stay visible in the editor. Cancelling a Running
+signal also requests a hold. Cancelling a Waiting/Ready step does not.
+Custom handlers must honor MISSIONHOLD and recheck ACTIONID during long
+tasks. Engine shutdown cannot undo completed staging or science actions.
+
+SUCCESS AND CHAINS
+If a handler reports success, the step emits its optional success event
+from the TARGET CPU. Arm another rule on that event to build a chain.
+For example: ARRIVED on rover CPU -> COLLECT_SCIENCE task on rover CPU ->
+SCIENCE_COLLECTED -> notify another ship. COLLECT_SCIENCE needs your own
+handler; science collection is not included. The saved rover route driver
+publishes ARRIVED when its final outbound waypoint is reached.
+
+The included mission pilot handles QUEUE_NEXT_MANEUVER and QUEUE_FLIGHT_PLAN
+while idle. Success means the request was CAPTURED, not that the burn is
+finished. Use MANEUVER_COMPLETED to wait for an actual completed burn.
+Existing capture requirements apply: focus the target at normal time,
+above atmosphere, with a ready pilot and valid future native maneuver nodes.
+Unsupported tasks stay pending for a custom handler or time out. No rule
+changes focus, resumes a safety hold, plans transfers, or reserves cargo.
+
+AUTOMATIC EVENTS
+ORBIT_ESTABLISHED: observed transition to a bound orbit with periapsis
+above the body's atmosphere plus the existing 1 km execution margin.
+LANDED: transition to stock landed/splashed state, not a precision touchdown
+certificate. BODY_CHANGED, PHYSICS_CHANGED and PHASE_CHANGED record observed
+transitions. VESSEL_CHANGED means CPU vessel GUID changed: separation,
+docking or reconstruction; it is intentionally not labelled SEPARATED.
+MANEUVER_COMPLETED / MANEUVER_STOPPED come from the existing live pilot.
+BURN_COMPLETED / BURN_STOPPED / BURN_CANCELLED come from the analytic executor.
+These are published to each CPU on the burn vessel, including unloaded CPUs.
+Saved rover routes also publish WAYPOINT_REACHED, ARRIVED, ROVER_RETURNING,
+ROVER_HOME and terrain/stuck/power/trace holds. See ROVER EXPLORATION.txt.
+CRAFT_OBSERVED records an initial baseline. Initial already-established
+orbit/landed state is not treated as a new transition. Physical observations
+run twice a real second for loaded armed CPUs and may miss shorter transitions.
+
+SCRIPT EVENTS AND HANDLERS
+PRINT ADDONS:PFR:CPUID.
+ADDONS:PFR:EVENT("SEPARATED").  // Call when YOUR separation check succeeds.
+ADDONS:PFR:EVENT("ARRIVED").    // Call after braking at YOUR destination.
+LOCAL id IS ADDONS:PFR:ACTIONID.
+LOCAL task IS ADDONS:PFR:ACTION.
+ADDONS:PFR:FINISHACTION(id, TRUE).  // or FALSE
+Event names use uppercase letters, digits and underscores, up to 64 chars.
+ACTION/ACTIONID are empty when no signal is Running or the CPU is held/off.
+The handler example supports REPORT_READY and reports unknown tasks failed.
+Run it only on an idle CPU: RUNPATH("0:/pf_event_handler_example.ks").
+If you use it after save/load, select it as the CPU boot program. It will
+reject another program's checkpoint instead of overwriting it.
+The task interface is cooperative and does not isolate multiple scripts on
+the same CPU. The existing mission pilot remains the sole guidance owner.
+
+SAVE/LOAD, RETRIES AND TIMELINE
+Rules, outcomes, pending holds and the last 2,000 events live in the KSP save.
+On load the restored history gains SAVE_LOADED with a NEW timeline branch ID.
+Quickload restores the complete older world, including its older rules;
+do not replay newer external plans blindly into it. Live backward time
+without a restored save fails unfinished rules for replanning.
+Completed ACK retries return the saved result. Wrong CPUs, conflicting IDs
+and off-thread API calls are rejected. A Running signal survives a saved
+reload with the SAME action ID. Delivery is at least once until acknowledged:
+make staging, deployment and science handlers idempotent and checkpoint their
+own progress. PF cannot guarantee exactly-once arbitrary kOS side effects.
+Wait/action deadlines advance with game time and are checked in flight.
+Only existing supported regional residency/analytic flight modes execute.
+
+The timeline shows recent triggers, starts, completions, failures, holds,
+physics changes and save-load branches. Export mission timeline writes CSV
+under PersistentFlight/FlightLogs/Timelines and copies its path. The rolling
+timeline retains 2,000 entries; rule state is retained separately. Up to 512
+rules may be retained. Explicitly remove terminal rules to free storage;
+removal also removes that rule's retry protection. Use a new ID for new work.
+Malformed/duplicate/missing/unsupported event data holds only this API,
+preserving raw records across subsequent saves. Restore a verified complete
+save to recover. Existing mission/capacity APIs keep their own behavior.
+
+PUBLIC API
+Reference PersistentFlight.dll, namespace PersistentFlight.
+FleetEventApi.Version = 1. All calls run on KSP's main thread once the scenario
+is available. Register(FleetEventRuleRequest), Get, List, Publish, Pending,
+Complete, Cancel, Remove, Timeline and IsHeld use plain public contracts.
+CPU IDs are persistent flight part IDs within THIS save, not vessel GUIDs.
+The bridge is a coordination interface, not an authentication boundary.
+Lodestone remains responsible for planning, inventory and admission decisions.
+
+Fuel queue forecasts publish FUEL_FORECAST_WARNING and FUEL_FORECAST_CLEAR.
+They are advisory unless a player-configured rule responds with an action.
+See PREDICTIVE SAFETY.txt for states, assumptions and script commands.
+
+0.17: idle pilot supports QUEUE_SOI_PLAN. Timeline adds SOI_PLAN_WAITING,
+SOI_PLAN_READY, SOI_PLAN_HELD and SOI_PLAN_COMPLETED.
+Read SOI FLIGHT PLANS.txt for arrival checks and automatic native travel.

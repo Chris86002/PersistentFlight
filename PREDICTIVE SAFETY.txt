@@ -1,0 +1,82 @@
+PersistentFlight 0.16 experimental - predictive fuel checks
+
+Open PF -> Mission actions -> Fuel forecast (scroll down).
+Check map plan estimates all future maneuvers on the current body.
+Check saved queue estimates the current remaining burn plus later nodes.
+Set Keep delta-v to the vacuum reserve you want after the plan.
+Default 0 m/s adds no delta-v reserve; the existing propellant warning
+fraction still applies. The default 10% burn margin increases the planned
+delta-v budget; choose more allowance for inefficient guidance.
+
+The result shows nominal plan delta-v, budget including margin, available
+vacuum delta-v, remaining delta-v, full-throttle duration, consumed fuel
+mass and lowest connected tank fraction. Duration and fuel include margin.
+If Insufficient, duration/fuel describe the requested budget, not a burn
+that this craft can actually finish. No automatic staging is modeled.
+
+Ready means this estimate fits the chosen reserves. ReserveRisk means
+it fits the fuel supply but enters a selected reserve. Insufficient means
+the budget exceeds connected propellant. Unknown explains an unsupported
+or unavailable estimate. None of these findings changes engines, throttle,
+queues or mission holds. Existing critical-reserve shutdown settings still
+operate independently. You can explicitly use an event rule to request a
+hold if you want; that is a separate mission action you configure.
+
+Saved queues refresh every two real seconds on loaded, armed craft when
+Refresh saved queue forecast automatically is enabled. Reserve, margin and
+refresh preference persist with the CPU. Estimates are transient and must
+be recomputed after loading. Manual checks show source and game-time age;
+refresh after changing engines, tanks, staging, fuel or plan. Disabling
+refresh leaves the last result displayed with its age. Terminal queues
+retain their last forecast for inspection; it is not a landing guarantee.
+
+Engine selection: active enabled engines plus matching pilot engine-tag
+parts, since the included pilot activates those tagged engines. For an
+idle craft without a pilot tag, activate engines with throttle at zero.
+Nothing in the check activates an engine. A multi-CPU craft uses the CPU
+owning a queue, otherwise the online pilot, otherwise its first CPU for
+panel settings. Script checks use the calling CPU's settings.
+
+Supported: ordinary stock chemical vacuum engines with constant Isp,
+thrust limiters, positive mass propellant mixtures and identical connected
+networks for each shared propellant. Locked tanks are excluded. Each
+mixture is limited by the first propellant to run out. Flow and capacity
+come from connected tanks, not every tank on the vessel. Different engine
+tank networks, solids, ion/massless fuel, multimode and special engine
+curves produce Unknown. Check in a loaded unpacked orbital vacuum craft.
+
+Assumes the selected engine group stays unchanged, parallel useful
+thrust, no staging or tank transfer. It omits RCS use, steering/gravity
+losses, fuel-generation systems and other consumers. A landing reserve
+is VACUUM delta-v, not a prediction of atmospheric Isp, touchdown or a
+successful landing. Use an allowance appropriate to your craft and test
+it. This update adds no terrain landing-site assessment or SOI planning.
+The existing rover return-energy estimate remains available separately.
+
+kOS example: RUNPATH("0:/pf_fuel_check.ks", 100, 150).
+The example sets your persistent reserve to 150 m/s and checks a 100 m/s
+plan with current settings. It does not queue or execute that plan.
+
+PFR suffixes:
+ CHECKFUEL(deltaV): recompute; true only for Ready. False also includes Unknown.
+ FUELKNOWN: whether the last result has a usable numerical model.
+ FUELCHECK: last state and explanation; initially Not checked.
+ FUELLEFTDV: estimate after margin; throws if not checked or Unknown.
+ FUELRESERVEDV: persistent chosen reserve, 0 to 10000 m/s.
+
+These suffixes describe the LAST check. Call CHECKFUEL again after changing
+FUELRESERVEDV or the craft. Always inspect FUELKNOWN/FUELCHECK before using
+FUELLEFTDV; false alone does not distinguish a shortage from an adapter gap.
+
+Queue transition events: FUEL_FORECAST_WARNING when status changes to
+ReserveRisk, Insufficient or Unknown; FUEL_FORECAST_CLEAR on return to Ready.
+Type these names into Event missions. Warning details include the state.
+They can trigger configured future rules; forecasts alone never hold a
+mission. The first Ready estimate is quiet. Events are not repeated for
+every numerical change. No active queue or disabled refresh resets the
+transition tracker; a subsequent queue reports its own warning.
+
+Validation scope is recorded in FUEL-VALIDATION.json in the release.
+
+0.17: future-body queues have a nominal current-engine budget and a
+separate corrected arrival fuel check. See SOI FLIGHT PLANS.txt.

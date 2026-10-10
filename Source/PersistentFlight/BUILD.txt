@@ -1,0 +1,7 @@
+Build with build.ps1 and build-regions.ps1 -KspRoot <KSP root>.
+Test-CircularTransfers.ps1, Test-Goals.ps1 and Test-Templates.ps1
+verify calculation/storage. Native tests require marked disposable
+clones and template.sfs fixtures, never production saves. Pair
+Start/Finish-CircularNative.ps1 and Start/Finish-CircularFlightRegression.ps1
+with the same clone per pair. Different test pairs running concurrently
+need separate clones. Verify child process identity before stopping it.

@@ -1,0 +1,61 @@
+{
+  "Version": "0.25",
+  "Files": [
+    {
+      "File": "GameData/PersistentFlight/KeepAlive.cfg",
+      "SHA256": "F637A3A8DF94770C0BC44C9ED70D4D1F02B473126886B9E206F0C0129F39C96C"
+    },
+    {
+      "File": "GameData/PersistentFlight/Plugins/PersistentFlight.dll",
+      "SHA256": "30ACC13526394B577900AE205290AFAE238B679B96C67DF7A215B0A73761E478"
+    },
+    {
+      "File": "GameData/PersistentFlight/Plugins/PersistentFlight.Regions.Experimental.dll",
+      "SHA256": "49DA21A8052ABB4805802A21AEC3A67B0D4FA2FC1763044C1A351D85599CA308"
+    },
+    {
+      "File": "GameData/PersistentFlight/RegionalAutonomy.cfg",
+      "SHA256": "81BF27AF7FB2ACDB9C6ECA7606FD4BA9E47824C1D8DF1657443061EF687AE712"
+    },
+    {
+      "File": "Ships/Script/boot/pf_mission_resume.ks",
+      "SHA256": "C52572AC619A8BF7DCC0ED4AB7E845D7E2713D6E3C0FEA51E6C50DAC5E3D3C1F"
+    },
+    {
+      "File": "Ships/Script/boot/pf_resume.ks",
+      "SHA256": "D766E307E00E4EA117E70C3FEF1D3F47749F39BC52106D1FB15E3B80647C75A8"
+    },
+    {
+      "File": "Ships/Script/boot/pf_rover_route_resume.ks",
+      "SHA256": "3A06EDB2865C24F061EEBDD173E9F8F01C4491A6FBA632E59415B8836A058D27"
+    },
+    {
+      "File": "Ships/Script/pf_ascent_resumable.ks",
+      "SHA256": "612538754F1FD9E5905EE94BE151AB4C770C380994DB36B7892B98BF31DEA941"
+    },
+    {
+      "File": "Ships/Script/pf_event_handler_example.ks",
+      "SHA256": "8823D9074C2C95BB854114A1C7DB0C23E95E43DE7FFDB7CFE953199D76494756"
+    },
+    {
+      "File": "Ships/Script/pf_fuel_check.ks",
+      "SHA256": "B0993296FDCD616E2326AED1A84F4DB92F883A6EDB260132B2B87CCF80DA428B"
+    },
+    {
+      "File": "Ships/Script/pf_mission_pilot.ks",
+      "SHA256": "D5201AA5AC7E1C1CA111121695FD4278FC12AF96145F60C889CDF333039B8C95"
+    },
+    {
+      "File": "Ships/Script/pf_return_resumable.ks",
+      "SHA256": "AF379EA73CB37993012693F799F8B0BC93E5EC4D95F8A379637A9A716531ED12"
+    },
+    {
+      "File": "Ships/Script/pf_rover_resumable.ks",
+      "SHA256": "3AC3D1407418B56AFABF3990E78A18616D97ABC7DAB043C9DE809F4CE494F34F"
+    },
+    {
+      "File": "Ships/Script/pf_rover_route.ks",
+      "SHA256": "5E7E16D3FBE132C356E6136634AB7C856371878348BE9DD5F9EF41BF90CAD8DD"
+    }
+  ]
+}

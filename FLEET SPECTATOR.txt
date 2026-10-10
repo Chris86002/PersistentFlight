@@ -1,0 +1,73 @@
+PersistentFlight 0.19 experimental — fleet spectator
+
+Open PF -> Fleet spectator. Select a craft's card to inspect its phase,
+mission state, physics mode, altitude, speed, LiquidFuel, power and recent
+mission events. Selecting a status card does not change flight focus.
+The status view follows the focused craft by default; selecting a card
+turns that preference off. Pin current craft also pauses an active tour.
+
+AUTO TOUR
+
+Start auto tour cycles native flight focus among nearby, loaded, unpacked
+craft with automatic flight enabled. Choose 5, 15, 30, 60 or 120 seconds per
+craft. Previous nearby and Next nearby use the same eligibility checks.
+The order is stable by craft name, then vessel identity. The tour runs
+while its panel is closed too; use Pause tour to stop automatic switching.
+
+Only coasting space craft on the current body are eligible. Both altitude
+and periapsis must stay at least 1 km above the atmosphere/surface datum.
+Surface flight, atmospheric approaches and EVA are excluded from touring.
+The spectator holds focus while throttle or actual engine thrust is
+present, a mission is held, or a background burn owns the current craft.
+Pending analytic jobs are excluded as tour destinations as well.
+
+The tour waits near maneuvers: 180 seconds of advance warning, plus the
+forecast duration of an active saved burn. If its duration is unknown,
+the craft retains focus. Waiting future-body plans use their next saved
+node time. Existing arrival and landing focus handling still takes priority.
+Time warp pauses tour switching until normal time resumes.
+
+A manual focus change or a landing/arrival takeover pauses the tour.
+A game scene load stops it. Tours, pins and watched selections are session
+controls and do not resume automatically from a save. Their display does
+not send kOS tasks or alter throttle, steering, armed state or burn queues.
+
+This is actual flight focus switching through PersistentFlight's existing
+regional system. Keyboard and flight controls apply to the currently
+focused craft. It is not an independent camera rendering a distant region.
+
+DISTANT CRAFT
+
+Unloaded craft show their last saved CPU phase and mission state, labelled
+Saved, alongside the native propagated orbit and stored resource amounts.
+Their scripts are asleep; viewing a card does not wake them or claim live
+physics. Ongoing supported analytic burns show their current model status.
+
+Visit this craft (reload fleet) performs an explicit native trip using the
+existing saved-fleet travel system. The tour pauses for the trip and remains
+stopped after the scene reload. The outgoing focus must first be eligible
+to leave. A pending background burn on the target blocks the visit so the
+spectator cannot stop its execution by loading the craft. Use existing
+mission controls to change such a job deliberately.
+
+For a nearby loaded craft, Focus this craft uses native local switching.
+The status view can inspect held, atmospheric and surface craft; automatic
+touring and departure checks are deliberately narrower. Existing fleet
+mission-action visits remain available with their original behavior.
+
+PERFORMANCE AND LIMITS
+
+Cards refresh twice a second while the spectator is visible or touring.
+Its idle closed-panel state does not scan the fleet. Fleet lists use pages
+of eight cards, and recent events show the latest four per selected craft.
+Existing chart logs, flight debriefs and event mission controls remain.
+
+No new physics backend, trajectory generator, remote live kOS execution,
+automatic distant travel, cinematic camera path or surface tour is added.
+Mission phase text is the last phase reported by the craft's script.
+
+INSTALL
+
+Close KSP, extract the whole ZIP and run Install.cmd. Upgrade from 0.18.
+Back up your complete save first. Uninstall.cmd restores prior payloads
+unless you edited them. Restore a matching pre-upgrade save if downgrading.

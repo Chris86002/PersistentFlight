@@ -1,0 +1,91 @@
+PersistentFlight 0.13 — fleet scheduling and performance
+
+Open PF on the stock toolbar, then choose Show timing. The panel reports
+mean, 95th-percentile and maximum tick cost over the last 256 samples.
+Export performance report writes a text file under
+PluginData/PersistentFlight/Performance and copies its path.
+
+Core timing includes its range scan. Regional timing includes regional
+reconciliation and private physics. The observed frame timing covers the whole game. Separate residency, telemetry
+capture and safety/warp director measurements help locate PF costs. These
+scopes overlap and must not be added; capture timing is per actual capture.
+Subsystem timings do not include all stock physics, kOS or other mod work.
+Managed memory and garbage collection counts cover the entire process.
+Dispatch delay uses game universal time, not wall-clock seconds.
+
+SCALING CHANGES
+Future analytic burns wait in an indexed time heap. Cancellation removes
+the entry immediately. Equal-time entries have stable insertion order;
+save/load reconstructs that order from the saved job list.
+Only due/active jobs are advanced each tick, using one vessel lookup index.
+All active burns receive their required update. No flight time is silently
+dropped to meet a processing budget. Existing safety checks still apply.
+Mission control refreshes its fleet list twice a second while open and
+draws at most 12 vessel cards per page. Stored maneuver counts are decoded
+only when their saved queue changes.
+
+CURRENT LIMITS
+One outstanding captured analytic burn per vessel. The existing live kOS
+plan remains limited to 32 nodes per CPU and one current celestial body.
+The new scheduler does not turn arbitrary kOS programs into distant
+simulation. Launches, landings and rover driving still require live physics.
+Timing instrumentation is a foundation, not automatic capacity admission.
+Read CAPACITY RESULTS.txt for native observations on this PC. They do not
+guarantee a safe simultaneous-physics capacity for different missions.
+
+LODESTONE INTERFACE (VERSION 1)
+Reference PersistentFlight.dll and use namespace PersistentFlight.
+The public request/result contracts contain no Unity or KSP object fields.
+Invoke FleetMissionApi only on KSP's main thread and only after the
+PersistentFlightScenario is available in the current save.
+
+Submit(new FleetBurnRequest(stableMissionGuid, "Lodestone", vesselGuid,
+                           startUniversalTime, deltaV, "PROGRADE"));
+Get(stableMissionGuid);
+Cancel(stableMissionGuid, "Lodestone");
+
+The vessel must be loaded and unpacked for initial engine/fuel capture.
+Activate supported stock chemical engines with throttle zero first.
+Execution waits until the vessel unloads, then performs a supported vacuum
+burn. This API does not switch focus, release regional residency, or start
+a kOS script. The caller must coordinate that handoff explicitly.
+The API rejects another outstanding analytic job on the same vessel.
+It does not debit Lodestone inventory, power, funds or reservations.
+
+Reuse the same mission GUID and payload when retrying. An accepted retry
+returns the saved receipt, even after completion, without another burn.
+Reusing an ID with a different payload fails. Failed submissions create no
+receipt, so the planner may retry when capture prerequisites are satisfied.
+Only the recorded owner can cancel an API request. The owner is a
+coordination identifier, not a security/authentication boundary.
+Get returns null for an unknown mission; Finished and Status distinguish
+completion, cancellation and stopped burns. DeliveredDV reports actual work.
+
+Receipts survive replacement of completed per-vessel burn records. They
+are scoped to the complete KSP save; quickload restores the older world.
+Damaged/duplicate/missing receipt records hold the gateway, including across
+another save/load, rather than permitting uncertain replay. Existing burns
+retain their ordinary execution rules. Restore a verified complete save to
+recover; do not delete receipts to make a request run again.
+The receipt limit is 20,000 per save. At capacity new submissions fail
+explicitly; no replay protection is silently evicted.
+
+INTEGRATION BOUNDARY
+Lodestone owns planning, cargo/production accounting and resource promises.
+PersistentFlight owns actual supported flight execution and burn receipts.
+Planned mission chains should dispatch one executable leg at a time and
+consume its result before releasing dependent work. A live bridge must
+reconcile actual fuel and stock state through Lodestone's existing
+reservation/journal authority. No second cargo or fuel ledger should be
+created. Full Lodestone gameplay integration is not included in this update.
+
+CAPACITY RESERVATIONS
+FleetCapacityApi provides the planning ledger described in CAPACITY RESERVATIONS.txt.
+Lodestone owns all admission decisions. This release adds no automatic admission
+controller or live Lodestone gameplay bridge. The native performance observations
+in CAPACITY RESULTS.txt describe the prior 0.12 build on this PC.
+CAPACITY RESERVATIONS
+FleetCapacityApi provides the planning ledger described in CAPACITY RESERVATIONS.txt.
+Lodestone owns all admission decisions. This release adds no automatic admission
+controller or live Lodestone gameplay bridge. The native performance observations
+in CAPACITY RESULTS.txt describe the prior 0.12 build on this PC.

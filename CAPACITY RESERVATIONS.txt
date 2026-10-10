@@ -1,0 +1,90 @@
+PersistentFlight 0.13 — capacity reservations
+
+This is a planning ledger. Lodestone owns admission decisions. PersistentFlight
+accepts overlapping reservations regardless of the capacity they book. It does
+not gate burns, load vessels, start kOS, reserve fuel, change time warp, switch
+focus or automatically reserve/release capacity when a mission changes state.
+Actual flight continues under its existing rules.
+
+Reference PersistentFlight.dll; use namespace PersistentFlight.
+FleetCapacityApi.Version is 1. Every call must run on KSP's main thread after
+PersistentFlightScenario is available. Public contracts contain no KSP objects.
+No Lodestone source or gameplay bridge is changed by this release.
+
+BOOKING
+var request = new FleetCapacityRequest(
+    reservationId, "Lodestone", missionId, vesselId,
+    startUniversalTime, endUniversalTime,
+    monitoredVessels: 1, liveVessels: 1, liveParts: 100, backgroundBurns: 0);
+var reservation = FleetCapacityApi.Reserve(request);
+
+Use stable, nonempty reservation and mission GUIDs. VesselId may be empty for
+an aggregate fleet reservation. Owner is a stable identifier, maximum 64
+characters, with no surrounding whitespace, control characters, braces or '='.
+Owner is a coordination identifier, not an authentication boundary.
+Times are finite, nonnegative KSP universal-time seconds. Intervals include
+their start and exclude their end: [start,end). Each count is a nonnegative
+integer; at least one must be positive. There is no ship/part/burn budget here.
+Dimensions are independent: Lodestone defines whether monitored counts include
+live ships. Counts from overlapping records add; vessels are not deduplicated.
+These are declared plans, not predictions or measurements of actual CPU use.
+
+RETRIES, CHANGES AND RELEASE
+Reserve with the exact INITIAL payload returns the current saved reservation,
+including amendments or a released result. It never rebooks a released ID.
+Another initial payload with the same reservation ID is rejected.
+Get(reservationId) returns the current reservation or null for an unknown ID.
+Each result has Request, Revision and Released; new records start at revision 1.
+
+Revise(replacementRequest, expectedRevision) atomically changes the interval or
+counts and increments the revision. Owner, mission, vessel and reservation IDs
+are fixed. Identical updates are a no-op. Retrying the same successful revision
+with its original expected revision returns the current result while it remains
+that revision. A stale competing update fails; read Get before replanning.
+Released reservations cannot be revised. Use a new ID for new work.
+
+Release(reservationId, owner, expectedRevision) removes its booked capacity and
+increments the revision. Release retries with the original expected revision or
+the resulting released revision return the released result. Unknown IDs return
+null. Wrong owners and stale competing releases fail. Release is terminal.
+Lodestone must release records after cancellation/completion, or revise intervals
+when scheduling changes. Passage of time only changes query results; it does
+not delete or release records. No mission is cancelled by releasing a booking.
+
+READING THE PLAN
+UsageAt(universalTime) sums unreleased records covering that instant.
+Peak(startUniversalTime, endUniversalTime) reports independent maximum counts
+in each dimension, plus the maximum simultaneous reservation count. Those
+dimension maxima may occur at different times. Query intervals are [start,end).
+Results use 64-bit totals even though individual counts are 32-bit integers.
+Queries use the current ledger state; released records do not contribute even
+to queries for past times. This is not an audit of historical actual flight use.
+
+List(owner, missionId, startUT, endUT, includeReleased) returns records whose
+intervals overlap the query, ordered by start time then reservation GUID.
+Use null owner for all owners and Guid.Empty missionId for all missions.
+Returned request/results are immutable; lists are detached arrays.
+Usage queries build a lazy event index after changes; point queries then use a
+binary search. There is no reservation processing in the flight update loop.
+
+SAVE/LOAD AND FAILURE HANDLING
+Records, revisions, initial retry payloads and released history are saved in
+the existing PersistentFlight scenario. Old saves begin with an empty ledger.
+Quickload restores the ledger from that complete save, just like other game
+state. Do not replay a newer external plan blindly after loading an older save.
+
+Malformed, duplicate or unsupported saved ledgers hold ONLY this API. IsHeld
+reports the hold; other queries/mutations throw rather than report empty use.
+Raw saved records and the hold are preserved on another save. Existing flight
+and mission APIs continue normally. Restore a verified complete save to recover;
+there is no automatic reset that silently loses reservations.
+
+MaximumRecords is 20,000 retained records per save, including released history.
+This is a storage safeguard, not a simulated-fleet capacity limit. At that
+storage limit new IDs fail explicitly; original retries still work. No history
+is automatically discarded. Lodestone should account for this storage limit.
+
+DELIVERED SCOPE
+Capacity reservations only. Admission rules, planner budgets, automatic
+mission dispatch, cargo/fuel accounting and live Lodestone integration remain
+with Lodestone. Read RESERVATION-VALIDATION.json for the exact tested scope.

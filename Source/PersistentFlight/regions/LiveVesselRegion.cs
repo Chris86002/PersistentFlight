@@ -1,0 +1,379 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace PersistentFlight.Regions
+{
+    // Experimental private vessel solver. KSP callbacks see their normal world coordinates.
+    // Only the synchronous solver step runs in local coordinates. Bodies stay in the private
+    // scene between ticks, so the default solver cannot advance them a second time.
+    public sealed class LiveVesselRegion : IDisposable
+    {
+        sealed class Tree { public GameObject Root; public Scene OriginalScene; public Vector3 Before; }
+        readonly List<Tree> trees=new List<Tree>();
+        readonly Rigidbody[] bodies;
+        readonly uint[] partIds;
+        readonly Vector3[] entryPositions,entryVelocities,solvedPositions,solvedVelocities;
+        CollisionEnhancer[] enhancers;
+        bool[] oldEnhancerEnabled;
+        CollisionDetectionMode[] oldCollisionModes;
+        readonly CelestialBody body;
+        readonly VesselRanges oldRanges;
+        bool disposed;
+        Vector3d[] precisePositions;
+        Vector3[] publishedPositions;
+        Quaternion publishedRotation;
+        Vector3d publishedBodyPosition;
+        bool preciseValid;
+        int rootIndex;
+        RegionalSurface surface;
+        RegionalWheels wheels;
+        public int GroundedWheels { get { return wheels==null ? 0 : wheels.GroundedWheels; } }
+        public int WheelVisualContacts { get { return wheels==null ? 0 : wheels.VisualContacts; } }
+        public int WheelSteps { get { return wheels==null ? 0 : wheels.Steps; } }
+        public int TerrainRebuilds { get { return surface==null ? 0 : surface.Rebuilds; } }
+        public double MaximumWheelHitDistance { get { return wheels==null ? 0 : wheels.MaximumHitDistance; } }
+        public float MaximumSuspensionCompression { get { return wheels==null ? 0 : wheels.MaximumCompression; } }
+        public bool AllowsDescent { get; private set; }
+        public bool FocusedTerrainBridge { get; internal set; }
+        public bool NativeTerrainReady { get { return wheels==null || wheels.NativeTerrainReady(Vessel); } }
+        public int GroundContacts { get { return (surface==null ? 0 : surface.Contacts)+(wheels==null ? 0 : wheels.ContactSamples); } }
+        public float MaximumImpactSpeed { get { return surface==null ? 0 : surface.MaximumImpactSpeed; } }
+        public double Height { get { return surface==null ? Vessel.radarAltitude : surface.Height(Vessel); } }
+        public Vessel Vessel { get; private set; }
+        public PhysicsRegion Region { get; private set; }
+        public int Steps { get; private set; }
+        public double SimulatedSeconds { get; private set; }
+        public double MaximumLocalRadius { get; private set; }
+        public double MaximumOrbitError { get; private set; }
+        public Vector3d LastWorldCenter { get; private set; }
+        public double LastOrbitUT { get; private set; }
+        public int NativeFrameChanges { get; private set; }
+        public int VelocityFrameCorrections { get; private set; }
+        public double LastVelocityFrameCorrection { get; private set; }
+        public bool MembershipValid { get { return Vessel!=null && Vessel.loaded && !Vessel.packed && Vessel.mainBody==body && partIds.SequenceEqual(Vessel.parts.Select(p=>p.flightID).OrderBy(x=>x)) && bodies.All(r=>r!=null); } }
+        public LiveVesselRegion(Vessel vessel,bool allowsDescent=false)
+        {
+            if(vessel==null || !vessel.loaded || vessel.packed || vessel==FlightGlobals.ActiveVessel || vessel.rootPart.rb==null)
+                throw new InvalidOperationException("Requires an unfocused, loaded, unpacked orbital vessel");
+            if(vessel.Splashed || (!allowsDescent && (vessel.Landed || vessel.altitude < vessel.mainBody.atmosphereDepth+1000)))
+                throw new InvalidOperationException("This adapter currently supports vacuum flight only");
+            Vessel=vessel; body=vessel.mainBody; partIds=vessel.parts.Select(p=>p.flightID).OrderBy(x=>x).ToArray();
+            AllowsDescent=allowsDescent;
+            GameObject[] roots=vessel.parts.Select(p=>p.transform.root.gameObject).Concat(new[]{vessel.transform.root.gameObject}).Distinct().ToArray();
+            bodies=roots.SelectMany(r=>r.GetComponentsInChildren<Rigidbody>(true)).Distinct().ToArray();
+            entryPositions=new Vector3[bodies.Length];entryVelocities=new Vector3[bodies.Length];
+            solvedPositions=new Vector3[bodies.Length];solvedVelocities=new Vector3[bodies.Length];
+            rootIndex=Array.IndexOf(bodies,vessel.rootPart.rb);
+            precisePositions=new Vector3d[bodies.Length]; publishedPositions=new Vector3[bodies.Length];
+            var owned=new HashSet<Rigidbody>(bodies);
+            foreach(GameObject root in roots)
+            {
+                if(root.GetComponentsInChildren<Vessel>(true).Any(v=>v!=vessel) || root.GetComponentsInChildren<Part>(true).Any(p=>p.vessel!=vessel))
+                    throw new InvalidOperationException("A scene root contains another vessel");
+                if(root.GetComponentsInChildren<Joint>(true).Any(j=>j.connectedBody!=null && !owned.Contains(j.connectedBody)))
+                    throw new InvalidOperationException("A joint crosses the region boundary");
+                trees.Add(new Tree{Root=root,OriginalScene=root.scene});
+            }
+            oldRanges=vessel.vesselRanges;
+            Region=new PhysicsRegion("PF-live-"+vessel.id+"-"+Guid.NewGuid().ToString("N"));
+            try {
+                if(Vessel.parts.Any(p=>p.Modules.Contains("ModuleWheelBase"))) wheels=new RegionalWheels(Vessel,Region);
+                if(AllowsDescent) OwnTerrainChecks();
+                foreach(Tree tree in trees) Region.Add(tree.Root);
+                if(wheels!=null) wheels.Bind();
+                ExtendRanges();
+            }
+            catch { Dispose(); throw; }
+        }
+        public void EnableDescent() { OwnTerrainChecks(); AllowsDescent=true; }
+        void OwnTerrainChecks()
+        {
+            if(enhancers!=null) return;
+            if(Vessel.GetComponent<RegionalFlightIntegrator>()==null) throw new InvalidOperationException("Regional descent requires the regional native flight-integrator adapter; a foreign integrator may be active");
+            if(wheels==null && Vessel.parts.Any(p=>p.Modules.Contains("ModuleWheelBase"))) { wheels=new RegionalWheels(Vessel,Region); wheels.Bind(); }
+            enhancers=trees.SelectMany(t=>t.Root.GetComponentsInChildren<CollisionEnhancer>(true)).Distinct().ToArray();
+            oldEnhancerEnabled=enhancers.Select(e=>e.enabled).ToArray();
+            foreach(var enhancer in enhancers) enhancer.enabled=false;
+            oldCollisionModes=bodies.Select(r=>r.collisionDetectionMode).ToArray();
+            foreach(var rigidbody in bodies) if(!rigidbody.isKinematic) rigidbody.collisionDetectionMode=CollisionDetectionMode.ContinuousSpeculative;
+        }
+        public void ResetPublishedPose() { preciseValid=false; if(wheels!=null) wheels.ResetFrame(); }
+        internal void RestoreSkippedVelocityCorrection(Vector3d correction)
+        {
+            // Krakensbane.Zero deliberately skips unfocused landed vessels:
+            // stock normally packs those craft. Our owned craft remain live.
+            // Apply exactly the same Galilean velocity change stock applies to
+            // its other live vessels, without moving the craft or adding thrust.
+            if(!MembershipValid || Vessel==FlightGlobals.ActiveVessel || !Vessel.LandedOrSplashed) return;
+            Vessel.ChangeWorldVelocity(correction);
+            VelocityFrameCorrections++; LastVelocityFrameCorrection=correction.magnitude;
+            Debug.Log("[PF-REGION] Restored landed velocity-frame correction="+LastVelocityFrameCorrection+" vessel="+Vessel.id);
+        }
+        internal void CorrectRotatingFrame(GameEvents.HostTargetAction<CelestialBody,bool> change)
+        {
+            if(!MembershipValid || change.host!=body) return;
+            NativeFrameChanges++;
+        }
+        void ExtendRanges()
+        {
+            var current=Vessel.vesselRanges;
+            if(Extended(current.prelaunch)&&Extended(current.landed)&&Extended(current.splashed)&&Extended(current.flying)&&Extended(current.subOrbital)&&Extended(current.orbit)&&Extended(current.escaping))return;
+            // Selective ownership, not a global range change. A loaded test vessel may later
+            // be moved farther away; we do not force-load arbitrary packed vessels.
+            var ranges=new VesselRanges(Vessel.vesselRanges);
+            foreach(var s in new[]{ranges.prelaunch,ranges.landed,ranges.splashed,ranges.flying,ranges.subOrbital,ranges.orbit,ranges.escaping})
+            { s.load=Math.Max(s.load,2000000); s.unload=Math.Max(s.unload,2001000); s.unpack=Math.Max(s.unpack,1998000); s.pack=Math.Max(s.pack,1999000); }
+            Vessel.vesselRanges=ranges;
+        }
+        static bool Extended(VesselRanges.Situation s){return s.load>=2000000&&s.unload>=2001000&&s.unpack>=1998000&&s.pack>=1999000;}
+        public void Step(float dt)
+        {
+            if(disposed) throw new ObjectDisposedException("LiveVesselRegion");
+            if(!Vessel.loaded || Vessel.packed || (Vessel==FlightGlobals.ActiveVessel && !FocusedTerrainBridge) || Vessel.mainBody!=body ||
+                !partIds.SequenceEqual(Vessel.parts.Select(p=>p.flightID).OrderBy(x=>x)) || bodies.Any(r=>r==null))
+                throw new InvalidOperationException("Vessel focus, topology, packing or body changed; release region");
+            if((!AllowsDescent && Vessel.altitude<body.atmosphereDepth+1000) || TimeWarp.CurrentRate!=1 || dt<=0 || dt>.05f)
+                throw new InvalidOperationException("Vacuum flight at normal time rate is required");
+            ExtendRanges();
+            Vector3d velocity=AllowsDescent ? Vector3d.zero : (Vector3d)Vessel.rootPart.rb.velocity;
+            Vector3[] positions=entryPositions,velocities=entryVelocities;
+            for(int i=0;i<bodies.Length;i++){positions[i]=bodies[i].position;velocities[i]=bodies[i].velocity;}
+            // Preserve sub-float solver motion. Stock origin shifts are much larger than
+            // publication rounding; part-relative relocation or explicit attitude changes reset ownership.
+            Vector3 externalShift=positions[rootIndex]-publishedPositions[rootIndex];
+            bool shapeChanged=Enumerable.Range(0,bodies.Length).Any(i=>(positions[i]-publishedPositions[i]-externalShift).sqrMagnitude>1f);
+            if(!preciseValid || shapeChanged || Quaternion.Angle(publishedRotation,Vessel.rootPart.rb.rotation)>1f)
+                for(int i=0;i<bodies.Length;i++) precisePositions[i]=positions[i];
+            else
+            {
+                Vector3d frameShift=body.position-publishedBodyPosition;
+                if(((Vector3d)externalShift-frameShift).sqrMagnitude>100)
+                    frameShift=(Vector3d)externalShift;
+                for(int i=0;i<bodies.Length;i++) precisePositions[i]+=frameShift;
+            }
+            Vector3d origin=wheels==null ? precisePositions[rootIndex] : wheels.Origin(body,precisePositions[rootIndex]);
+            if(wheels!=null) velocity=(FlightGlobals.RefFrameIsRotating ? Vector3d.zero : body.getRFrmVel(origin))-Krakensbane.GetFrameVelocity();
+            foreach(Tree tree in trees) tree.Before=tree.Root.transform.position;
+            bool local=false;
+            try
+            {
+                local=true;
+                if(AllowsDescent && Vessel.altitude-body.TerrainAltitude(Vessel.latitude,Vessel.longitude,false)<5000)
+                {
+                    if(surface==null) surface=new RegionalSurface(Region,body,wheels!=null && wheels.Motorized);
+                    surface.Prepare(Vessel,origin,dt,velocity,precisePositions[rootIndex]);
+                    if(wheels!=null) {
+                        Vector3d adjustment=wheels.AlignEntry(Vessel,origin);
+                        if(adjustment.sqrMagnitude>0) {
+                            for(int i=0;i<bodies.Length;i++) { precisePositions[i]+=adjustment;positions[i]+=(Vector3)adjustment; }
+                            foreach(Tree tree in trees)tree.Before+=(Vector3)adjustment;
+                            Vessel.CoMD+=adjustment;
+                        }
+                    }
+                }
+                foreach(Tree tree in trees) tree.Root.transform.position=(Vector3)((Vector3d)tree.Before-origin);
+                for(int i=0;i<bodies.Length;i++) { bodies[i].position=(Vector3)(precisePositions[i]-origin); bodies[i].velocity=(Vector3)((Vector3d)velocities[i]-velocity); }
+                // KSP has already applied its real engine, steering and gravity forces during
+                // FixedUpdate, using the published world poses. Simulate consumes those forces.
+                if(wheels!=null) wheels.BeforeSolve();
+                Region.Step(dt);
+                Vector3d exitOrigin=origin+velocity*dt;
+                if(wheels!=null) wheels.AfterSolve(exitOrigin);
+                Vector3[] solved=solvedPositions,solvedVelocity=solvedVelocities;
+                for(int i=0;i<bodies.Length;i++){solved[i]=bodies[i].position;solvedVelocity[i]=bodies[i].velocity;}
+                foreach(Tree tree in trees) tree.Root.transform.position=(Vector3)(exitOrigin+(Vector3d)tree.Root.transform.position);
+                for(int i=0;i<bodies.Length;i++)
+                {
+                    MaximumLocalRadius=Math.Max(MaximumLocalRadius,solved[i].magnitude);
+                    precisePositions[i]=exitOrigin+(Vector3d)solved[i];
+                    bodies[i].position=(Vector3)precisePositions[i];
+                    publishedPositions[i]=bodies[i].position;
+                    bodies[i].velocity=(Vector3)(velocity+(Vector3d)solvedVelocity[i]);
+                }
+                local=false;
+                preciseValid=true; publishedRotation=Vessel.rootPart.rb.rotation; publishedBodyPosition=body.position;
+                if(surface!=null) { surface.Publish(); Vessel.radarAltitude=surface.Height(Vessel); }
+                if(Steps<2 && wheels!=null && wheels.Motorized) Debug.Log("[PF-WHEELS] First solve: altitude="+Vessel.altitude+" native terrain="+Vessel.terrainAltitude+" root altitude="+body.GetAltitude(Vessel.rootPart.rb.position)+" sample="+body.TerrainAltitude(Vessel.latitude,Vessel.longitude,false)+" landed="+Vessel.Landed+" feet="+GroundedWheels);
+                double mass=bodies.Where(r=>!r.isKinematic).Sum(r=>(double)r.mass);
+                Vector3d center=Vector3d.zero;
+                foreach(Rigidbody r in bodies.Where(r=>!r.isKinematic)) center+=(Vector3d)r.worldCenterOfMass*(r.mass/mass);
+                LastWorldCenter=center;
+                LastOrbitUT=Planetarium.GetUniversalTime();
+                // OrbitDriver reads the published physical state on the following stock tick.
+                Vector3d predicted=body.position+Vessel.orbit.getRelativePositionAtUT(LastOrbitUT).xzy;
+                MaximumOrbitError=Math.Max(MaximumOrbitError,(center-predicted).magnitude);
+                Steps++; SimulatedSeconds+=dt;
+            }
+            finally
+            {
+                // If the solver failed, restore entry coordinates before releasing ownership.
+                if(local)
+                {
+                    foreach(Tree tree in trees) if(tree.Root!=null) tree.Root.transform.position=tree.Before;
+                    for(int i=0;i<bodies.Length;i++) if(bodies[i]!=null) { bodies[i].position=positions[i]; bodies[i].velocity=velocities[i]; }
+                }
+                if(surface!=null) surface.Publish();
+            }
+        }
+        public void Dispose()
+        {
+            if(disposed) return; disposed=true;
+            Vector3 nativeGroundAdjustment=wheels==null || Vessel==null ? Vector3.zero : wheels.NativeGroundAdjustment(Vessel);
+            if(wheels!=null) wheels.Suspend();
+            foreach(Tree tree in trees) if(tree.Root!=null && tree.OriginalScene.IsValid() && tree.OriginalScene.isLoaded)
+                SceneManager.MoveGameObjectToScene(tree.Root,tree.OriginalScene);
+            if(Vessel!=null && nativeGroundAdjustment.sqrMagnitude>0) {
+                Vector3[] worldPositions=bodies.Select(r=>r==null ? Vector3.zero:r.position).ToArray();
+                foreach(Tree tree in trees) if(tree.Root!=null) tree.Root.transform.position+=nativeGroundAdjustment;
+                for(int i=0;i<bodies.Length;i++) if(bodies[i]!=null) bodies[i].position=worldPositions[i]+nativeGroundAdjustment;
+                Vessel.CoMD+=(Vector3d)nativeGroundAdjustment;
+            }
+            Physics.SyncTransforms();
+            if(Vessel!=null && oldRanges!=null) Vessel.vesselRanges=oldRanges;
+            if(enhancers!=null) for(int i=0;i<enhancers.Length;i++) if(enhancers[i]!=null) { enhancers[i].framesToSkip=Math.Max(enhancers[i].framesToSkip,2); enhancers[i].enabled=oldEnhancerEnabled[i]; }
+            if(oldCollisionModes!=null) for(int i=0;i<bodies.Length;i++) if(bodies[i]!=null) bodies[i].collisionDetectionMode=oldCollisionModes[i];
+            if(wheels!=null) wheels.Dispose();
+            if(surface!=null) surface.Dispose();
+            if(Region!=null) Region.Dispose();
+        }
+    }
+
+    [KSPAddon(KSPAddon.Startup.Flight,false)]
+    public sealed class RegionFlightRunner : MonoBehaviour
+    {
+        public static RegionFlightRunner Instance;
+        public readonly List<LiveVesselRegion> Regions=new List<LiveVesselRegion>();
+        public string LastError { get; private set; }
+        public float LastReleaseVelocityError { get; private set; }
+        readonly RegionalResidency residency=new RegionalResidency();
+        Vessel pendingOutgoing;
+        bool leavingScene;
+        public void Awake() { Instance=this; GameEvents.onKrakensbaneDisengage.Add(RestoreLandedVelocityFrames); GameEvents.onRotatingFrameTransition.Add(CorrectRotatingFrames); GameEvents.onVesselSwitching.Add(BeforeFocus); GameEvents.onVesselChange.Add(AfterFocus); GameEvents.onGameSceneLoadRequested.Add(BeforeSceneChange); }
+        public void Update() { if(!leavingScene){if(FlightGlobals.ready)FleetPerformance.Frame.Add(Time.unscaledDeltaTime*1000.0);residency.Update();} }
+        public void LateUpdate()
+        {
+            if(leavingScene || !HighLogic.LoadedSceneIsFlight || !FlightGlobals.ready) return;
+            foreach(var vessel in FlightGlobals.Vessels.Where(v=>v!=null && v.loaded && !v.packed && RegionalResidency.Armed(v)))
+                RegionalEngineEffects.Reconcile(vessel);
+        }
+        void BeforeSceneChange(GameScenes next)
+        {
+            leavingScene=true;
+            RegionalAutonomy.ReleaseStartupHolds();
+            foreach(var region in Regions.ToArray()) Release(region);
+            residency.Dispose();
+            Debug.Log("[PF-REGION] Released regional ownership before native scene teardown");
+        }
+        void BeforeFocus(Vessel from,Vessel to)
+        {
+            if(leavingScene) return;
+            pendingOutgoing=from;
+            var owned=Regions.FirstOrDefault(r=>r.Vessel==to);
+            if(owned!=null) {
+                if(!owned.NativeTerrainReady) {
+                    owned.FocusedTerrainBridge=true;
+                    Debug.Log("[PF-FOCUS] Keeping supported focused craft in its private solver while native terrain loads");
+                } else Release(owned);
+            }
+            residency.Update();
+        }
+        void AfterFocus(Vessel to)
+        {
+            if(leavingScene) return;
+            if(to!=null && to.loaded && !to.packed && RegionalResidency.Armed(to) && !Regions.Any(r=>r.Vessel==to)) RegionalWheels.ResumeFocused(to);
+            // Native switching holds FlightGlobals.ready false until unpacking finishes.
+            // The outgoing live craft still needs ownership before the next stock solve.
+            var outgoing=pendingOutgoing; pendingOutgoing=null;
+            if(outgoing!=null && outgoing!=to && outgoing.loaded && !outgoing.packed &&
+                RegionalResidency.Armed(outgoing) && !Regions.Any(r=>r.Vessel==outgoing))
+                try { Enroll(outgoing,true); }
+                catch(Exception e) { LastError=e.ToString(); Debug.LogError("[PF-FOCUS] Outgoing enrollment: "+e); }
+            residency.Update(); RegionalAutonomy.Reconcile(this);
+        }
+        public bool Focus(Vessel target)
+        {
+            if(target==null || !target.loaded || target.packed || target==FlightGlobals.ActiveVessel ||
+                !RegionalResidency.Armed(target) || TimeWarp.CurrentRate!=1 || !FlightGlobals.ready) return false;
+            return FlightGlobals.ForceSetActiveVessel(target);
+        }
+        void CorrectRotatingFrames(GameEvents.HostTargetAction<CelestialBody,bool> change)
+        {
+            foreach(var region in Regions.ToArray()) region.CorrectRotatingFrame(change);
+        }
+        void RestoreLandedVelocityFrames(Vector3d correction)
+        {
+            foreach(var region in Regions.ToArray()) region.RestoreSkippedVelocityCorrection(correction);
+        }
+        public LiveVesselRegion Enroll(Vessel vessel,bool allowsDescent=false)
+        {
+            if(Regions.Any(r=>r.Vessel==vessel)) throw new InvalidOperationException("Vessel already enrolled");
+            var region=new LiveVesselRegion(vessel,allowsDescent); Regions.Add(region); return region;
+        }
+        public void Release(LiveVesselRegion region)
+        {
+            Rigidbody root=region.Vessel!=null && region.Vessel.rootPart!=null ? region.Vessel.rootPart.rb : null;
+            Vector3 before=root==null ? Vector3.zero : root.velocity;
+            Regions.Remove(region); region.Dispose();
+            LastReleaseVelocityError=root==null ? 0 : (root.velocity-before).magnitude;
+        }
+        public IEnumerator Start()
+        {
+            var afterStock=new WaitForFixedUpdate();
+            while(true)
+            {
+                yield return afterStock;
+                if(leavingScene || !HighLogic.LoadedSceneIsFlight || FlightGlobals.fetch==null) continue;
+                long timingStamp=FleetPerformance.Start();
+                try {
+                RegionalAutonomy.Reconcile(this);
+                foreach(var region in Regions.ToArray())
+                    try {
+                        if(region.FocusedTerrainBridge) {
+                            if(region.Vessel!=FlightGlobals.ActiveVessel) region.FocusedTerrainBridge=false;
+                            else if(region.NativeTerrainReady) {
+                                Release(region); RegionalWheels.ResumeFocused(region.Vessel);
+                                Debug.Log("[PF-FOCUS] Native terrain ready; focused craft returned to stock solver");
+                                continue;
+                            }
+                        }
+                        region.Step(Time.fixedDeltaTime);
+                    }
+                    catch(Exception e) {
+                        LastError=e.ToString(); Debug.LogError("[PF-REGION] Released vessel: "+e);
+                        // Enrollment succeeded but the first solve can still
+                        // reject a surface or changed topology. Apply the same
+                        // backoff as constructor failures, rather than creating
+                        // and unloading another private scene every physics tick.
+                        if(region.Vessel!=null) foreach(var module in region.Vessel.parts.SelectMany(p=>p.Modules.OfType<ModuleRegionalAutonomy>()))
+                            module.retryAfter=Time.realtimeSinceStartup+2;
+                        Release(region);
+                    }
+                } finally { FleetPerformance.RegionalTick.Record(timingStamp); }
+            }
+        }
+        public void OnDestroy()
+        {
+            GameEvents.onKrakensbaneDisengage.Remove(RestoreLandedVelocityFrames);
+            GameEvents.onRotatingFrameTransition.Remove(CorrectRotatingFrames);
+            GameEvents.onVesselSwitching.Remove(BeforeFocus); GameEvents.onVesselChange.Remove(AfterFocus);
+            GameEvents.onGameSceneLoadRequested.Remove(BeforeSceneChange);
+            foreach(var region in Regions.ToArray()) region.Dispose(); Regions.Clear();
+            residency.Dispose();
+            if(Instance==this) Instance=null;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+

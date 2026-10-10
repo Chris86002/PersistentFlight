@@ -1,0 +1,78 @@
+PASS clean install GameData/PersistentFlight/KeepAlive.cfg
+PASS clean install GameData/PersistentFlight/Plugins/PersistentFlight.dll
+PASS clean install GameData/PersistentFlight/Plugins/PersistentFlight.Regions.Experimental.dll
+PASS clean install GameData/PersistentFlight/RegionalAutonomy.cfg
+PASS clean install Ships/Script/boot/pf_mission_resume.ks
+PASS clean install Ships/Script/boot/pf_resume.ks
+PASS clean install Ships/Script/boot/pf_rover_route_resume.ks
+PASS clean install Ships/Script/pf_ascent_resumable.ks
+PASS clean install Ships/Script/pf_event_handler_example.ks
+PASS clean install Ships/Script/pf_fuel_check.ks
+PASS clean install Ships/Script/pf_mission_pilot.ks
+PASS clean install Ships/Script/pf_return_resumable.ks
+PASS clean install Ships/Script/pf_rover_resumable.ks
+PASS clean install Ships/Script/pf_rover_route.ks
+PASS repeat installation is a no-op
+PASS repeat installation retains first backups
+PASS uninstall refuses player edits
+PASS player edit preserved
+PASS fresh uninstall removes all payload files
+PASS save preserved through install and uninstall
+PASS dependency preserved
+PASS unrelated script preserved
+PASS reinstall after uninstall
+PASS upgrade uninstall restores GameData/PersistentFlight/KeepAlive.cfg
+PASS upgrade uninstall restores GameData/PersistentFlight/Plugins/PersistentFlight.dll
+PASS upgrade uninstall restores GameData/PersistentFlight/Plugins/PersistentFlight.Regions.Experimental.dll
+PASS upgrade uninstall restores GameData/PersistentFlight/RegionalAutonomy.cfg
+PASS upgrade uninstall restores Ships/Script/boot/pf_mission_resume.ks
+PASS upgrade uninstall restores Ships/Script/boot/pf_resume.ks
+PASS upgrade uninstall restores Ships/Script/boot/pf_rover_route_resume.ks
+PASS upgrade uninstall restores Ships/Script/pf_ascent_resumable.ks
+PASS upgrade uninstall restores Ships/Script/pf_event_handler_example.ks
+PASS upgrade uninstall restores Ships/Script/pf_fuel_check.ks
+PASS upgrade uninstall restores Ships/Script/pf_mission_pilot.ks
+PASS upgrade uninstall restores Ships/Script/pf_return_resumable.ks
+PASS upgrade uninstall restores Ships/Script/pf_rover_resumable.ks
+PASS upgrade uninstall restores Ships/Script/pf_rover_route.ks
+PASS damaged backup rejected before removal
+PASS damaged backup preserves GameData/PersistentFlight/KeepAlive.cfg
+PASS damaged backup preserves GameData/PersistentFlight/Plugins/PersistentFlight.dll
+PASS damaged backup preserves GameData/PersistentFlight/Plugins/PersistentFlight.Regions.Experimental.dll
+PASS damaged backup preserves GameData/PersistentFlight/RegionalAutonomy.cfg
+PASS damaged backup preserves Ships/Script/boot/pf_mission_resume.ks
+PASS damaged backup preserves Ships/Script/boot/pf_resume.ks
+PASS damaged backup preserves Ships/Script/boot/pf_rover_route_resume.ks
+PASS damaged backup preserves Ships/Script/pf_ascent_resumable.ks
+PASS damaged backup preserves Ships/Script/pf_event_handler_example.ks
+PASS damaged backup preserves Ships/Script/pf_fuel_check.ks
+PASS damaged backup preserves Ships/Script/pf_mission_pilot.ks
+PASS damaged backup preserves Ships/Script/pf_return_resumable.ks
+PASS damaged backup preserves Ships/Script/pf_rover_resumable.ks
+PASS damaged backup preserves Ships/Script/pf_rover_route.ks
+PASS missing kOS rejected
+PASS dependency refusal changes no game files
+PASS missing ModuleManager rejected
+PASS unsupported game version rejected
+PASS package corruption rejected
+PASS corrupt package changes no game files
+PASS drag-in layout GameData/PersistentFlight/KeepAlive.cfg
+PASS drag-in layout GameData/PersistentFlight/Plugins/PersistentFlight.dll
+PASS drag-in layout GameData/PersistentFlight/Plugins/PersistentFlight.Regions.Experimental.dll
+PASS drag-in layout GameData/PersistentFlight/RegionalAutonomy.cfg
+PASS drag-in layout Ships/Script/boot/pf_mission_resume.ks
+PASS drag-in layout Ships/Script/boot/pf_resume.ks
+PASS drag-in layout Ships/Script/boot/pf_rover_route_resume.ks
+PASS drag-in layout Ships/Script/pf_ascent_resumable.ks
+PASS drag-in layout Ships/Script/pf_event_handler_example.ks
+PASS drag-in layout Ships/Script/pf_fuel_check.ks
+PASS drag-in layout Ships/Script/pf_mission_pilot.ks
+PASS drag-in layout Ships/Script/pf_return_resumable.ks
+PASS drag-in layout Ships/Script/pf_rover_resumable.ks
+PASS drag-in layout Ships/Script/pf_rover_route.ks
+PASS manual install removal guidance
+PASS hotfix upgrades existing 0.24 without uninstall
+PASS older installer record preserved
+PASS regional update installed over previous region controls
+PASS update removal restores previous region controls
+PASS older installer record retained after hotfix removal

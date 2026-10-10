@@ -1,0 +1,53 @@
+PersistentFlight 0.25 experimental — reach a circular orbit at an altitude
+
+Open PF -> Mission templates on an idle orbital craft at normal time.
+Enter a name, select Circular orbit at altitude, enter the target altitude
+in kilometers and Save orbital goal. Select the saved goal to preview it.
+The goal can be reused on another craft orbiting the same celestial body.
+
+The preview shows each burn's timing, direction and delta-v, the transfer
+orbit, the final circular altitude and a fuel advisory for the full plan.
+Scroll inside the panel if needed. Calculate fresh goal creates the native
+map nodes. Inspect both nodes and their map orbits, then explicitly choose
+Mission actions -> Queue entire flight plan to execute them.
+Preview and map creation do not start thrust or queue a mission.
+
+Targets above the current apoapsis use a periapsis departure; targets below
+the current periapsis use an apoapsis departure. For targets between the
+apsides, the planner compares the supported apsis transfers and chooses the
+lower estimated total delta-v. It preserves the orbital plane. This is an
+apsis-transfer planner, not a global optimizer or a rendezvous planner.
+
+The first burn sets the opposite apsis at the desired altitude. After half
+an orbit of that transfer ellipse, the second burn circularizes there.
+When the requested altitude is already an existing apsis, the plan reduces
+to a single circularization burn. Already-complete goals and corrections
+below the supported minimum are refused rather than creating fake burns.
+Each real burn must be 0.5 to 10,000 m/s, with at least 60 seconds to prepare
+before the first burn and between burns. Application recalculates the plan.
+
+The preview assumes instantaneous burns. Finite burn duration, residual
+guidance error and later disturbances affect the actual final orbit.
+Review the native map plan and the completed flight reports. The existing
+pilot and queue handle automatic progression and save-reload recovery.
+The same regional range and CPU availability rules still govern background
+execution; a transfer can carry a craft out of the regional flight area.
+
+Current and target orbits must clear atmosphere top or the airless surface
+by at least 1 km, remain inside 95 percent of the body's sphere-of-influence
+radius, and stay in the current body's frame until all planned burns finish.
+Escapes, atmospheric trajectories and known encounters before completion
+are refused. No inclination change, cross-body transfer or docking is added.
+
+This goal stores its body, target altitude and source-orbit context in a
+checked PFMT2 library file, without source burn vectors or absolute times.
+Existing PFMT1 sequences and the four 0.24 goals remain compatible. Older
+0.24 versions cannot read the new goal kind; preserve its file if downgrading.
+The shared 100-file library, checksum, deletion and backup rules still apply.
+See MISSION TEMPLATES.txt and GOAL TEMPLATES.txt for the existing goal types.
+
+CIRCULAR-VALIDATION.json records the exact release tests. Native map checks
+cover higher/lower/intermediate circles, one-burn reductions and all four
+previous goal types. The flight fixture executes two real unfocused burns
+after a cold save reload; it tests raising the target altitude. Test tolerance
+for the actual final apsides is 2 km, not a promise for arbitrary spacecraft.

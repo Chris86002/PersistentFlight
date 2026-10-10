@@ -1,0 +1,12 @@
+PersistentFlight 0.25 experimental
+
+Adds a reusable goal to reach a circular orbit at a chosen altitude.
+Calculates an apsis transfer followed by circularization at arrival.
+For intermediate targets, compares the supported apsis transfers by
+estimated total delta-v; preserves the orbital plane.
+Reduces an existing target apsis to a single circularization burn.
+Previews all burns, transfer/final orbit and combined fuel advisory.
+Retains explicit map review and queueing, recovery and normal flight reports.
+Rejects unsafe or unqueueable plans and known body changes before completion.
+Existing PFMT1 sequences and the four PFMT2 goal types remain compatible.
+See CIRCULAR ORBITS.txt and CIRCULAR-VALIDATION.json for exact scope.

@@ -1,0 +1,54 @@
+PersistentFlight 0.25 experimental — the four original orbital goal templates
+
+For the new goal that reaches a chosen circular altitude in one or two
+burns, see CIRCULAR ORBITS.txt. These instructions cover the original goals.
+
+Open PF -> Mission templates with an idle orbital craft focused at normal
+time. Enter a name, select one of the four orbital goals and Save orbital
+goal. The selected goal must be valid for this craft when saved.
+
+Circularize at Ap: prograde burn at apoapsis to raise periapsis to it.
+Circularize at Pe: retrograde burn at periapsis to lower apoapsis to it.
+Set periapsis at Ap: enter the desired periapsis altitude in kilometers.
+Set apoapsis at Pe: enter the desired apoapsis altitude in kilometers.
+Both altitude goals can raise or lower the opposite apsis. The fixed apsis
+stays at the current orbit's altitude. A target cannot swap the apsides.
+These goals do not create a circular orbit at an arbitrary new altitude;
+use an altitude goal and then circularize at the resulting opposite apsis.
+
+Select a saved goal on an idle craft at the same celestial body. The preview
+shows a newly calculated burn, its time, expected periapsis/apoapsis and
+current-craft fuel advisory. Preview creates no map nodes or queued work.
+Click Calculate fresh goal — create map plan, inspect the native map orbit,
+then use Mission actions -> Queue entire flight plan to execute it.
+Creating a map plan does not start thrust. The existing maneuver pilot
+executes the explicitly queued plan and records its normal flight debrief.
+
+Goal burns use the next matching apsis with at least 60 seconds to prepare.
+If it is closer, they wait another orbit. The sequence first-burn-delay
+field does not control a goal's apsis timing. Each application recalculates
+timing and delta-v from the destination craft, rather than reusing a source
+burn. Map application requires an empty map plan and no active mission.
+
+Supported orbits are finite, bound ellipses with current and target
+periapsis at least 1 km above atmosphere top (or the airless surface), and
+apoapsis below 95 percent of the body's sphere-of-influence radius.
+Escapes, atmospheric passes, encounters before the selected apsis,
+cross-body goals and burns below 0.5 m/s or
+above 10,000 m/s are refused. The preview assumes an instantaneous burn.
+Finite burn duration, guidance error and later disturbances can change the
+actual resulting orbit; inspect the map and the completed flight report.
+There is no rendezvous, transfer-window or inclination planner in 0.24.
+
+Existing 0.23 maneuver sequence files remain readable without rewriting.
+Goals use the same checked, per-campaign .pft library, in the PFMT2 format;
+0.23 cannot read goal files. Preserve the library when downgrading.
+Names, source-orbit context, body, goal kind and target altitude are stored.
+Source burn vectors and absolute burn times are not stored in goal files.
+The 100-file limit, checksum verification, damaged-file preservation,
+verified deletion and separate-library backup rules remain unchanged.
+See MISSION TEMPLATES.txt for those shared library and backup instructions.
+
+GOAL-VALIDATION.json describes this release's calculation, native flight
+and installer tests. The native solver verifies all four goal types;
+the execution fixture verifies one actual circularization after a reload.

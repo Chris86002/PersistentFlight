@@ -1,0 +1,17 @@
+PASS circular goal checked-file persistence without source burns; existing map plan preserved
+PASS destination-specific recalculation and wrong-body/atmosphere/powered-craft refusal without map/control writes
+PASS native map case 0 (Circularize at apoapsis) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 1 (Circularize at periapsis) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 2 (Set periapsis — burn at apoapsis) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 3 (Set apoapsis — burn at periapsis) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 4 (Reach circular orbit at altitude) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 5 (Reach circular orbit at altitude) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 6 (Reach circular orbit at altitude) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 7 (Reach circular orbit at altitude) matches every burn within 5 m; preview/application did not queue or thrust
+PASS native map case 8 (Reach circular orbit at altitude) matches every burn within 5 m; preview/application did not queue or thrust
+PASS two-burn UI and total fuel advisory; explicit queue and cold scene reload requested
+PASS cold-load circular goal and both calculated maneuvers retained; craft unfocused
+PASS first real unfocused transfer burn completed; circularization automatically promoted
+PASS real pilot coast lease permitted native time warp between burns
+PASS both actual unfocused burns completed after reload; residual <=0.5 m/s each and both target apsides within 2000 m
+PASS ALL CIRCULAR TRANSFER NATIVE OPERATIONS

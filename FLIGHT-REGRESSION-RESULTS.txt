@@ -1,0 +1,49 @@
+phase=0 UT=10001.04 pilot=False task=No maneuver queued queued=False fuel=360 alt=100000.000008438 regional=False forecast=null tag=
+PASS custom landing site, rejected invalid latitude, selected-vessel site, CSV escaping
+PASS native tagged inactive engine and kOS suffixes, thrust limiter, disabled tank, reserve warning, and read-only advisory; predicted LF=3.69040265759518
+PASS event registration, CPU ownership, thread guard, running task file round trip, timeline branching, corrupt/missing/future ledger holds and preserved evidence
+PASS real kOS ACTION/ACTIONID/FINISHACTION handshake and event-dependent native notification
+phase=0 UT=10011.0400000002 pilot=True task=No maneuver queued queued=False fuel=360 alt=99999.9532675184 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+PASS native timeout hold, synthetic orbit/vessel transition capture and CSV timeline export
+PASS actual idle kOS pilot captured its two-node plan from an event task
+PASS whole saved queue forecast, warning/clear timeline transitions and persisted reserve settings
+PASS two-node queue, invalid queue rejection, saved queue/recovery boot, reserve policies; performing cold scene reload
+PASS native next-node capture, target-orbit round trip, saved maneuver/site, switched away before burn
+phase=7 UT=10018.6800000004 pilot=True task=Aligning queued=True fuel=360 alt=99999.9059406713 regional=False forecast=Unknown:Load and unpack this craft first tag=NODE_ENGINE
+PASS event outcomes and timeline survive cold flight scene reload
+PASS forecast reserve settings restored after cold scene load
+PASS cold-load CPU boot resumed actual kOS pilot with both maneuvers
+phase=2 UT=10028.6600000006 pilot=True task=Waiting for burn queued=True fuel=360 alt=99999.543037635 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10038.6600000008 pilot=True task=Waiting for burn queued=True fuel=360 alt=99999.687565819 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10048.6600000011 pilot=True task=Waiting for burn queued=True fuel=360 alt=99999.7736647705 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10058.5800000013 pilot=True task=Waiting for burn queued=True fuel=360 alt=99999.8567442511 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10068.5600000015 pilot=True task=Burning queued=True fuel=357.946036909776 alt=100000.288826422 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+PASS first background burn completed and second automatically promoted
+phase=2 UT=10078.5400000017 pilot=True task=Waiting for burn queued=True fuel=357.817301434964 alt=100007.051329909 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10088.5400000019 pilot=True task=Waiting for burn queued=True fuel=357.817301434964 alt=100023.943143399 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10098.5200000022 pilot=True task=Waiting for burn queued=True fuel=357.817301434964 alt=100050.233726675 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10108.5000000024 pilot=True task=Waiting for burn queued=True fuel=357.817301434964 alt=100085.9221186 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10118.4800000026 pilot=True task=Waiting for burn queued=True fuel=357.817301434964 alt=100130.998562887 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+phase=2 UT=10128.4400000028 pilot=True task=Burning queued=True fuel=356.455563372113 alt=100185.617290041 regional=True forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+PASS forecast vs actual two-burn consumption: predicted=3.69040265759518 actual=3.65538203504207
+PASS debrief real unfocused burns: planned=25.0000000000006 estimated impulse=24.7622360532568 measured LF=3.65538203504207 tank delta=3.65538203504207
+PASS unfocused kOS maneuver: residual=0.223535156875239 fuel consumed=3.65538203504207
+phase=41 UT=10138.400000003 pilot=True task=Complete queued=False fuel=356.344617964958 alt=100254.594219334 regional=False forecast=Ready:Plan fits the chosen reserve tag=NODE_ENGINE
+PASS cancel, focus return, two-craft dashboard and chart histories, persisted CSV: <local-validation-workspace>\fleet.csv
+PASS FLEET FEATURE QUEUE / COLD RECOVERY BUNDLE
+PASS cancelled-before-ignition debrief and repeated cancel idempotency
+PASS native warp blocks active work, permits leased coasting, stops before deadline
+PASS actual low-propellant reserve warning and engine shutdown safety hold
+PASS mission hold retains queued request; cancellation clears queue
+PASS synthetic descending-altitude trigger causes real native landing focus switch with outgoing craft still regional (not a touchdown test)
+Visiting remote Mun craft through saved fleet travel
+PASS API duplicate/conflict/ownership/thread checks, pending/cancelled receipt restore, corrupt receipt hold persists and valid snapshot recovery
+PASS remote Mun travel and distant analytic burn queue; returning to Kerbin
+phase=9 UT=10149.5800000033 pilot=False task=Cancelled by test queued=False fuel=356.344617964958 alt=100350.592227829 regional=False forecast=null tag=NODE_ENGINE
+phase=9 UT=10159.4200000035 pilot=True task=Cancelled by test queued=False fuel=356.344617964958 alt=100451.21478808 regional=False forecast=null tag=NODE_ENGINE
+PASS concurrent unloaded Mun burn while focused at Kerbin: delta-v=4.99999999999956
+PASS analytic execution after native scene reload, completion receipt and retry without replay, timing report
+PASS debrief exact analytic delta-v/fuel, saved branch and identities, active-load partial flag, corrupt-evidence preservation without flight hold, retained history and CSV export
+PASS event outcomes and timeline survive cold flight scene reload
+PASS timeline live maneuver and unloaded burn completion hooks, cross-body saves and export
+PASS ALL FUEL FORECAST AND EVENT MISSION NATIVE OPERATIONS

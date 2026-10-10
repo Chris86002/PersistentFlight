@@ -1,0 +1,21 @@
+name: Orbital unit checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  orbital-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Circular transfers
+        shell: powershell
+        run: ./Source/PersistentFlight/tests/Test-CircularTransfers.ps1
+      - name: Original orbital goals
+        shell: powershell
+        run: ./Source/PersistentFlight/tests/Test-Goals.ps1
+      - name: Mission template persistence
+        shell: powershell
+        run: ./Source/PersistentFlight/tests/Test-Templates.ps1

@@ -1,0 +1,46 @@
+PersistentFlight 0.12 — native fleet benchmark
+
+AMD Ryzen 7 5800X3D 8-Core Processor / AMD Radeon RX 7900 XT
+KSP 1.12.5; windowed 1280x720; uncapped; same disposable modded game.
+Mean frame milliseconds (lower is better). One observation per case/build.
+
+Case                         0.11        0.12       0.12 p95
+watch-10                        2.52        2.47          3.66
+watch-50                        3.50        3.38          5.40
+watch-100                       5.00        4.71          7.34
+watch-500                      39.01       33.44         39.30
+watch-500-panel                40.29       34.90         40.72
+burn-10-of-500                 37.92       33.58         40.63
+live-1-parts-3                  3.42        3.35          4.95
+live-4-parts-3                  3.89        3.92          6.65
+live-4-parts-30                 5.11        5.09          9.44
+live-4-parts-100               10.67       10.76         19.13
+
+Forced 500-ship telemetry capture mean: 4.63 ms before; 2.58 ms after.
+
+Additional 0.12 observations:
+burn-1-of-500: mean 34.75 ms; p95 40.54 ms; max 71.02 ms; 14.88 simulated / 15.03 wall seconds
+burn-50-of-500: mean 34.31 ms; p95 40.00 ms; max 72.18 ms; 14.86 simulated / 15.02 wall seconds
+live-2-parts-3: mean 4.32 ms; p95 6.51 ms; max 46.66 ms; 15.00 simulated / 15.00 wall seconds
+live-8-parts-3: mean 5.58 ms; p95 9.36 ms; max 81.41 ms; 14.96 simulated / 15.01 wall seconds
+watch-500-sustained: mean 38.02 ms; p95 44.61 ms; max 518.60 ms; 174.98 simulated / 180.08 wall seconds
+
+Controlled diagnostics:
+watch-500-repeat: mean 33.55 ms; p95 40.78 ms; max 91.18 ms; peak core tick 3.39 ms
+watch-500-pf-loops-disabled: mean 32.41 ms; p95 39.99 ms; max 71.51 ms; peak core tick 0.00 ms
+burn-100-of-500: mean 34.63 ms; p95 42.64 ms; max 87.26 ms; peak core tick 4.20 ms
+burn-500-of-500: mean 36.14 ms; p95 51.95 ms; max 88.88 ms; peak core tick 36.21 ms
+
+180-second retained managed memory change after GC: +0.87 MB.
+This includes KSP, other mods and benchmark samples; it is not a PF-only leak measurement.
+
+Interpretation and next work:
+The update removes repeated fleet membership searches and per-step physics buffers.
+Monitoring/telemetry improved; live-physics frame times did not show a consistent gain.
+The loops-disabled diagnostic measures remaining game/other-mod cost, not a pure stock install.
+Keep monitored and fully physical ship counts separate. Large live missions with active kOS,
+atmosphere, terrain contact and complex engines still need their own capacity tests.
+Use the native measurements to design capacity reservations; no automatic admission policy
+or Lodestone gameplay bridge is implemented by this release.
+
+Real native KSP vessels. 15-second uncapped windowed 1280x720 observations after warm-up; 180-second sustained monitoring case. Monitored cases include one future queued burn per remote vessel; burn cases make the named subset due. Telemetry snapshots are enabled, CSV recording is disabled. Other installed mods and occasional stock asteroid spawns remain active. kOS CPUs inactive for capacity cases; powered live craft use harness-set 5% throttle. Analytic jobs use a real loaded-vessel engine capture mapped to identically constructed remote vessels; initial remote dispatch API capture is not tested by this fixture. Core/regional tick summaries are last-256-sample windows, not the entire burn interval; diagnostic peak core windows are sampled every half second. Memory/GC counts include whole process, measurement lists and forced telemetry capture. Single observations per case/build; not a universal capacity guarantee.

@@ -1,0 +1,40 @@
+PersistentFlight 0.21 experimental — maneuver interruption protection
+
+Queued live maneuvers now capture their vessel identity, part connections
+and original engine parts. Staging, docking/undocking or vessel rebuilding
+that changes those identities/connections interrupts the saved plan.
+The request is retained for review, throttle is zeroed, and engines stop.
+Original engines on newly detached, loaded fragments stop as well.
+Debriefs mark interrupted topology/resource accounting as incomplete.
+
+The included pilot obeys holds during alignment, coasting and burns. It
+cannot restart a retained interrupted request merely because power returns.
+During a live burn, a CPU that is OFF/STARVED or loses its pilot heartbeat
+causes an unconditional interruption, even if optional critical-reserve
+abort is disabled. The CPU status check runs before stock fixed physics;
+heartbeat loss uses the existing five-second pilot lease.
+
+A new persistent marker identifies saves made during an active live burn.
+Loading that save holds the request and shuts down thrust. It does not
+silently replay a partially executed maneuver. Review the current orbit,
+Cancel maneuver, then create/queue a suitable new plan. The partial debrief
+is retained. Restoring an earlier queued-plan recovery point remains an
+option, and rewinds the whole game save as documented in 0.20.
+
+Resume mission and the kOS MISSIONHOLD setter refuse to release an
+interruption requiring requeue. Cancel clears the interrupted request and
+its ownership marker; a fresh queue captures the current craft layout.
+Ordinary manually paused plans retain their previous resume behavior.
+
+Older coasting plans without these new fields adopt their current craft
+layout as a baseline. Older powered saves lacking a verified layout are
+held at startup. A legacy save cannot establish a craft layout from before
+that save; review it when upgrading. Custom scripts that bypass the live
+maneuver pilot/queue still require their own interruption handling.
+Analytic distant-burn jobs retain their existing separate validity checks.
+
+Test scope is recorded in INTERRUPTION-VALIDATION.json. The docking test
+uses forced stock vessel-coupling/undocking operations on native fixtures;
+it exercises actual vessel reconstruction, not physical port approach and
+magnetic capture. Separation uses the stock part-decoupling operation.
+No automatic docking guidance or new staging sequence is added.

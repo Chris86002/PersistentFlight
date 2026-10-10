@@ -1,0 +1,82 @@
+PersistentFlight 0.15 experimental: rover exploration
+
+Create a saved route of 1 to 64 latitude/longitude stops. The stock-wheel
+rover slows for terrain and approaching stops, brakes at each waypoint,
+and records travel points about every 20 metres for a retraced return.
+Routes run in existing native/regional physics at normal time. Existing
+same-body live range and capacity requirements still apply. This release
+does not simulate rover driving while packed or on a distant body.
+
+STARTING A ROUTE
+1. Focus a settled surface rover with stock motorized wheels and an idle
+   kOS CPU. Finish/cancel any maneuver queue or analytic burn first.
+2. Open PF -> Rover routes. Select its CPU.
+3. Enter stops in decimal latitude/longitude. "Add 100 m east" builds a
+   simple straight route from the rover or last draft stop.
+4. Choose cruise speed (0.25-5 m/s), arrival radius (2-20 m), slope limit
+   (2-30 degrees), reserve (5-80%) and stuck timeout (15-600 game seconds).
+5. Save the route. It starts paused. Home is the current rover position.
+   The CPU boot selection changes to boot/pf_rover_route_resume.ks; the
+   previous selection is restored when you clear the finished route.
+6. On that CPU, run:
+       RUNPATH("0:/pf_rover_route.ks").
+7. Choose Resume route. After checking motion, focus another craft on
+   the same body. The existing automatic regional physics handles driving.
+
+PAUSE, RECOVERY AND RETURN
+Pause stops wheel commands and applies brakes. Resume clears the route's
+latched terrain/stuck/power hold, then immediately checks current conditions
+again. A separate fleet mission hold must also be reviewed and released.
+Return home retraces the recorded path, including intermediate points.
+It does not clear a hazard hold. You can return after completing all stops.
+Cancel closes the route; Clear restores the previous boot selection.
+
+Full game saves retain waypoints, progress, recorded path, energy estimate,
+return cursor and pause/hold. Recovery boot runs the included driver after
+a normal CPU reboot. It preserves a pause or hazard hold. Loading rebases
+the movement watchdog so time spent unloading does not count as being stuck.
+Invalid checkpoint data is preserved and held, including craft ownership;
+restore a complete save or explicitly discard the damaged route in the UI.
+
+TERRAIN AND POWER CHECKS
+The controller samples surface heights ahead and across a three-metre
+corridor, over an 8-25 m look-ahead. Excess slope, unavailable terrain or
+ocean crossings stop the route for player review. This checks terrain
+heights, not every rock, building or collision obstacle. No automatic
+detour planner is included. Keep initial tests slow on open terrain.
+
+Battery reserve initiates automatic return if enabled; otherwise it holds.
+After measuring net battery drain over 10 m, the rover also estimates the
+energy needed to retrace the route, using a 50% margin and 5% capacity
+allowance. This estimate depends on the observed craft and terrain; it
+cannot guarantee sufficient energy on steeper return legs. At 1% charge,
+the rover holds even during return. Solar generation can reduce measured
+net drain. Critical power and stuck detection still apply.
+
+No progress of at least 0.5 m toward the current target within the chosen
+timeout causes a latched stuck hold. Pauses and unsupported wheels do not
+consume this timeout. The 1,024-point return trace holds before overflowing.
+The driver keeps brakes applied and denies warp while running, including
+after arrival. Stop the program explicitly before handing its CPU to
+other guidance. Clear route state separately through the editor.
+
+MISSION TIMELINE / SCRIPT SUFFIXES
+WAYPOINT_REACHED: one event per completed stop, after speed falls below
+0.1 m/s within the arrival radius. ARRIVED: final outbound stop complete.
+ROVER_RETURNING, ROVER_HOME, ROVER_STUCK, ROVER_TERRAIN_HOLD,
+ROVER_POWER_HOLD and ROVER_TRACE_HOLD can trigger event mission rules.
+Route save/resume/cancel and status changes are also logged.
+
+PFR:ROUTEID      saved route ID, or empty when absent/damaged
+PFR:ROUTEACTIVE  outbound or returning (also true during a route hold)
+PFR:ROVERRUN()   sample safety/progress and update the saved route
+PFR:ROUTESPEED   current requested speed, zero while paused/held
+PFR:ROUTETARGET  latitude/longitude target for wheel steering
+PFR:ROUTESTATE   readable route status
+PFR:ROUTEINDEX   number of outbound stops reached
+PFR:ROUTESLOPE   last sampled maximum slope, degrees
+
+Use the provided driver or a cooperating script that honors all holds
+and zero-speed requests. The API does not prevent unrelated scripts from
+commanding wheel controls on another CPU. The route editor rejects a
+known maneuver pilot/queue and another saved route on the same vessel.

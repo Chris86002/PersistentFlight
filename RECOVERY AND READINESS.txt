@@ -1,0 +1,65 @@
+PersistentFlight 0.20 experimental — recovery and flight readiness
+
+Open PF -> Flight readiness / Recovery. Select the focused craft or cycle
+through fleet craft. Inspection does not change guidance, engines, throttle,
+mission holds, queues or vessel focus. It refreshes every two seconds while
+this page is open.
+
+Readiness checks:
+- Live versus saved/packed state and normal time.
+- Current electric charge (10% warning; not a prediction of generation or
+  endurance). Mission monitors retain their own configurable thresholds.
+- Unfinished analytic background-burn ownership.
+- Automatic-flight enrollment and each CPU's live mission-pilot heartbeat.
+- Mission holds and rover-route ownership.
+- Saved queue readability, target body and overdue nodes.
+- Current map-node delta-v when no saved plan exists and the craft is focused.
+- Existing vacuum engine/connected-tank forecast, selected engine tags,
+  margin and reserves. Unknown engines/flow modes remain explicitly unknown.
+
+These are maneuver checks, not a guarantee of success. They do not validate
+landing terrain, steering authority, staging, modded-engine behavior or
+long-term power generation. Later-body SOI budgets are nominal and need
+arrival checks. A saved remote CPU cannot be declared live/ready.
+
+Recovery points contain the complete KSP game save, including every craft,
+mission queue, event timeline and debrief history. They are separate from
+persistent.sfs, quicksave, the existing fleet save and the travel snapshot.
+Eight recent points are retained normally. Each new save is written and
+checked as a GAME with FLIGHTSTATE, then committed with a SHA-256 digest.
+Older matching points and their KSP preview caches retire only after the
+new point commits. Files that
+have changed or are damaged are preserved for manual inspection; they can
+make the on-disk count exceed eight. Uncommitted/orphan saves are not loaded
+or automatically deleted. Only strict PF-Recovery-<GUID> names and their
+matching metadata are managed. Player saves are never part of rotation.
+
+Automatic recovery is enabled by default and can be disabled for this save.
+It captures after the included live maneuver/flight-plan queue is configured,
+before the included pilot begins a burn, and before a distant native visit.
+Automatic requests within ten real-time seconds in the same flight scene
+reuse the recent automatic point.
+Local spectator tours do not create recovery files. Analytic job submissions,
+custom scripts and rover actions do not independently trigger these hooks;
+use Create recovery point now before those operations.
+Saving can briefly pause a large game. A failed automatic save is reported
+in the page and as a screen message; it does not cancel existing guidance.
+
+Restore:
+1. At normal time, choose a listed point and press Restore this point.
+2. Review the whole-save rewind warning, then Confirm restore.
+3. The file digest and saved focused craft are checked before any load.
+4. A recovery of the current state is saved first, even if automatic recovery
+   is disabled. If that backup fails, restoration is refused.
+5. Native KSP loads the chosen game and its saved focused craft.
+
+This rewinds ALL progress since that point, not just the selected craft.
+The per-save automatic-recovery preference is kept outside historical flight
+snapshots. Included pilots have their existing recovery boot. Custom scripts
+still need checkpoint-aware boots; arbitrary running instruction state is
+not saved. A point just before a burn can be too late to restart alignment;
+overdue maneuvers may hold or stop. Prefer the earlier queued-plan point when
+retrying a maneuver. Corrupt points are refused rather than silently loaded.
+
+Keep an independent copy of the save when upgrading or downgrading the mod.
+Recovery history is finite and is not a substitute for that backup.

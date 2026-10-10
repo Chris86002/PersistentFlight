@@ -1,0 +1,11 @@
+PersistentFlight 0.25 experimental
+
+Close KSP, extract the complete folder and run Install.cmd.
+Upgrade from 0.24; uninstall restores prior files unless edited.
+Keep a separate save and template-library backup.
+
+PF -> Mission templates adds Circular orbit at altitude.
+Calculate a transfer and circularization plan for the destination craft.
+Preview both burns, the transfer orbit and the total fuel advisory.
+Create the map plan, review it, then queue in Mission actions.
+Read CIRCULAR ORBITS.txt and CIRCULAR-VALIDATION.json.

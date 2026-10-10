@@ -1,0 +1,12 @@
+PersistentFlight 0.25 experimental
+
+Focus an idle orbital craft at normal time.
+Open PF -> Mission templates and enter a name.
+Select Circular orbit at altitude and enter the target altitude in km.
+Save orbital goal, then select it to preview the calculated plan.
+Scroll to see both burns, the transfer/final orbit and total fuel estimate.
+Calculate fresh goal creates the native map plan.
+Inspect both map nodes, then Mission actions -> Queue entire flight plan.
+A target already at an existing apsis needs only one circularization burn.
+Preview and map creation do not start thrust.
+Previous maneuver sequences and the four original goals remain available.

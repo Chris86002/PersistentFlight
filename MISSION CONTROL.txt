@@ -1,0 +1,135 @@
+PersistentFlight 0.9 - Mission control
+
+IN FLIGHT
+Enable Automatic regional physics on each kOS CPU. Open Mission control
+with the cyan PF icon on the right-hand toolbar, alongside kOS.
+Each armed craft has its own status
+card, a Switch here button, recording control, and expandable Mission actions.
+The cards report altitude, orbit speed, orbit, fuel, power and script phase.
+Record fleet starts a CSV and altitude/speed traces for loaded armed craft.
+Copy log folder copies the current session's folder path to the clipboard.
+CSV files are under PersistentFlight/FlightLogs in your game folder.
+The chart compares up to eight recorded craft and keeps the last 20 minutes
+at approximately one sample per second.
+
+AUTOMATIC MANEUVERS
+The pilot must own an otherwise idle CPU. Finish other guidance and release
+its throttle and steering locks before starting this program:
+  RUNPATH("0:/pf_mission_pilot.ks").
+Activate the engines you want it to use. If you pass an engine name tag,
+the pilot activates and shuts down only engines with that tag:
+  RUNPATH("0:/pf_mission_pilot.ks", "UPPER_ENGINE").
+The updated Kalcon upper-stage program starts this pilot after ascent.
+
+Focus the craft above the atmosphere at normal time rate. Create a future
+maneuver node in map view, then open Mission actions and Queue next maneuver.
+Allow enough time to align: 90 seconds or more is a useful starting point.
+You can then switch to another armed craft. The pilot aligns, times the burn,
+reduces throttle as it approaches the target, and releases control afterward.
+The panel reports queued/alignment/waiting/burning/completed status.
+Cancel maneuver releases the request; the pilot stops on its next update.
+
+Queue next maneuver captures one node. Queue entire flight plan captures up
+to 32 chronological nodes from 0.5 to 10000 m/s within the current body's
+reference frame. Each completed burn promotes the next saved node automatically. Editing a queued node is detected while focused; cancel
+and queue again after changing a flight plan. Missing native node gizmos do
+not invalidate the saved target-orbit snapshot. The warp guard permits cooperative coast leases and returns to 1x before a
+burn. It blocks warp while guidance is active or a CPU cannot renew a lease.
+Burns stop when alignment fails, thrust is lost, the residual grows, or the
+time limit expires. Read the kOS terminal when a task reports Stopped.
+Large finite burns and complex interplanetary transfers need further testing.
+
+LANDING SITES
+Before a Kalcon launch, choose KSC grass, West of KSC, Here, custom decimal
+latitude/longitude, or a selected landed vessel on the same body. The choice
+is copied to each CPU on that craft and the booster reads it at separation.
+Sites are destinations for the existing guidance, not terrain-safety checks.
+The vessel target must remain on the surface and available. KSC launchpad,
+water sites and vessel targets enable a native landing handoff: focus switches
+to the descending craft below 6 km, before regional ocean contact would start.
+KSP supplies pad, water and vessel collisions in the focused scene. Keep a
+clear site or a suitably sized deck. Other same-body regional craft continue.
+This handoff does not add private building or ocean colliders. Accurate pad
+and moving-deck touchdowns still require craft-specific flight validation.
+Changing a site after separation does not retarget a running booster script.
+
+CUSTOM kOS PROGRAMS
+SET ADDONS:PFR:PHASE TO "Boostback".       // dashboard phase
+SET ADDONS:PFR:RECORDING TO TRUE.          // CSV and chart capture
+PRINT ADDONS:PFR:LANDTARGET.               // chosen GeoCoordinates
+PRINT ADDONS:PFR:SETLANDSITE("My site", -0.2, -74.6).
+LANDSITE is the label; HAVELANDVESSEL/LANDVESSEL expose vessel targets.
+The mission pilot uses PILOTREADY as a five-second heartbeat lease,
+QUEUENODE, CANCELNODE, NODEQUEUED, NODEUT, NODEDV, NODEVECTOR, NODESTATE,
+and FINISHNODE(success). These operate on that CPU's saved task.
+
+SAVE AND RELOAD
+Save fleet writes a named KSP save. Landing choices and queued target-orbit
+data persist. Queuing a maneuver registers boot/pf_mission_resume.ks on the
+pilot CPU and remembers its original boot selection and engine tag. The
+recovery boot restarts pf_mission_pilot.ks and the saved queue. Restore previous
+CPU boot program restores the earlier selection. The archive pilot must remain
+installed and the CPU must have power and boot access. Overdue maneuvers stop
+for replanning instead of firing late. Custom kOS memory is not checkpointed
+by this feature; supported custom programs must keep their own checkpoints.
+Use the existing checkpoint helpers for the supported ascent/return/rover
+programs. Stop recording closes the CSV when no craft is still recording.
+Starting again creates a new session folder; changing flight scenes does too.
+
+WINDOW CONTROLS
+Use the PF toolbar icon in flight or map view to open or close the panel.
+Drag the panel by its title bar. Its position is remembered across flights
+and restarts, and kept on-screen when the resolution changes. F2 hides it
+with the rest of the interface. Closing it releases flight-control locks.
+Settings are stored in GameData/PersistentFlight/PluginData/MissionControl.cfg.
+
+
+
+FLEET SAFETY
+Mission actions shows alerts for the lowest engine propellant fraction,
+electric power, and a lost heartbeat on a monitored script. Warning thresholds
+are adjustable from 1% to 50%. Acknowledge current alerts suppresses repeats
+until the condition clears. Critical means 1% propellant/power or a heartbeat
+missing for 15 real seconds at normal time. After scene loading there is a
+15-second grace period. Automatic engine stop is optional and off by default.
+Enable Stop engines and pause to shut engines down and retain queued mission
+requests on critical conditions. Pause mission stops engines and sets rover
+hold; flight motion continues. Resume rejects an overdue maneuver. Cancel
+maneuver clears the entire queue. Replan after a burn interruption.
+Custom programs can set MONITORED to TRUE and call HEARTBEAT regularly.
+PHASE updates renew the heartbeat; do this even during long waits. Scripts
+must honor MISSIONHOLD. The mission pilot and updated Kalcon return loop do.
+
+DISTANT MISSIONS
+Queue distant burn and release live physics captures the activated stock
+chemical engines and resource connections with throttle zero. It disables
+regional keepalive on that craft. Visit another distant craft to unload it;
+the saved analytic job then advances its orbit and consumes real saved fuel
+and power, alongside missions on other bodies. The fleet displays job status
+and delivered delta-v even while the craft is unloaded. Visit craft saves a
+travel snapshot and starts the native flight scene focused on that craft.
+It requires normal time. Saved pilot queues survive this transition.
+Distant burns support the six displayed orbital directions, wholly vacuum
+orbits, unchanged engine topology and the body's original reference frame.
+The guard caps warp at 1000x while any analytic burn is pending. Loaded jobs
+wait for unloading; returning to a craft pauses the analytic executor.
+This backend does not run arbitrary kOS programs or drive an unloaded rover.
+Full live autonomy across distant bodies remains outside the regional solver's
+validated 2,000 km residency range. A Mun rover and Kerbin live launch therefore
+still need a further physics/residency implementation, not just a bigger range.
+
+COOPERATIVE TIME WARP
+Guard time warp is on by default per armed CPU. Active scripts block warp
+unless they explicitly publish WARPUNTIL (universal-time coast deadline) and
+WARPREADY. The mission pilot grants a lease only while idle or aligned and
+coasting, and revokes it before engine control. Every armed, guarded CPU must
+permit the coast. An unloaded CPU cannot renew a live lease. The guard also
+runs when the native warp rate changes. Autonomous powered flight stays at 1x.
+This is guarded coast warp, not accelerated live regional physics.
+
+MOVING VESSEL TARGETS
+The Kalcon return program refreshes a vessel target's coordinates and deck
+height throughout boostback, entry and landing. A surface target must stay
+on the same body. Deck height uses the existing droneshipaltradar parameter;
+calibrate it to the chosen craft. Moving-target accuracy and complete RTLS
+missions require actual flight tests with the selected booster and platform.

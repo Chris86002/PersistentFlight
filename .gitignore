@@ -1,0 +1,24 @@
+# Build outputs and local fixtures
+Source/**/*.dll
+Source/**/*.exe
+Source/**/bin/
+Source/**/obj/
+Source/**/*-results.txt
+Source/**/PF-Tests*/
+*.pdb
+*.log
+*.zip
+__pycache__/
+.vs/
+.vscode/
+work/
+KSP-*/
+# Game saves and credentials must remain local
+saves/
+.env
+*.user
+
+Source/**/PF-*/
+Source/**/installer-tests/
+Source/**/release/*-installer-tests/
+Source/**/mission-control/*.py

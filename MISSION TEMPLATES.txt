@@ -1,0 +1,59 @@
+PersistentFlight 0.25 experimental — reusable maneuver sequence templates
+
+For the new goal templates that calculate burns from the destination orbit,
+see GOAL TEMPLATES.txt. The instructions below describe fixed sequences.
+
+Open PF -> Mission templates. With an idle orbital craft focused, create
+1 to 32 future maneuvers in map view. Name the sequence and Save map plan.
+The template stores radial/normal/prograde delta-v and time spacing relative
+to its first burn, plus the body and original orbit for review.
+
+Focus another idle orbital craft at the same body. Select the template and
+enter First burn in seconds (60 to 86,400). Inspect the destination orbit
+and current-craft fuel estimate. Apply creates a new native map plan with
+fresh times. Review its resulting orbit/encounters in map view, then use
+Mission actions -> Queue entire flight plan to start the existing pilot.
+Applying alone does not start thrust, arm a queue or change the CPU boot.
+
+The new plan is computed by the destination craft's native maneuver solver.
+Old absolute burn dates and source target-orbit snapshots are not reused.
+The same delta-v/timing from a different orbit can miss a transfer window,
+produce a different orbit or lack sufficient fuel. The fuel advisory uses
+the destination's engine group and reserve settings; it is not a transfer
+window or gravity-loss prediction. Select an engine tag or activate suitable
+engines at zero throttle to obtain that advisory. Review after every apply.
+
+Templates reject wrong-body destinations, active missions, rover routes,
+background burns, nonzero thrust, packed/unfocused craft and atmospheric
+or surface use. An existing map plan is preserved: remove it in map view
+before applying another. Failed node construction removes only the nodes
+created by that application. Interrupted plans retain existing requeue
+rules. Application does not copy engine tags, targets, safety settings,
+part identities or stage commands between craft.
+
+This release templates maneuvers in the current body's reference frame.
+Launch, deployment/staging, rover routes and arrival burns on other bodies
+are not captured. Existing SOI plans and rover mission systems still work
+through their separate controls. An orbital deployment or transfer's local
+burn sequence can be saved; destination geometry still needs review.
+
+Library: saves/<campaign>/PersistentFlight/MissionTemplates
+Use Copy library folder to find it. Files use GUID filenames and .pft.
+You can copy verified .pft files between campaign libraries with KSP closed.
+Keep their filenames. Up to 100 files are allowed, including unreadable
+files. Save creates a new identity and never overwrites an existing file.
+Duplicate names are distinguished by the short identity shown in the list.
+Remove template asks you to confirm that selected template in the panel.
+
+Versioned files have bounded sizes, strict timing/vector checks and SHA-256
+checksums. Unreadable files remain in place with an explanation while valid
+entries remain available. Checksums detect accidental damage, not authorship.
+Delete/apply re-read the selected file and reject a stale selection if it
+changed. Writes use a separate temporary file and a final non-overwriting
+move. Preserve the library when backing up a campaign: recovery .sfs points
+rewind game state but do not rewind these separate template files.
+
+TEMPLATE-VALIDATION.json records the native/model/installer evidence. Native
+checks include transfer to a different craft/orbit, a real UI preview,
+explicit queuing, cold-load recovery and two actual unfocused kOS burns.
+These tests do not establish a correct transfer window for arbitrary craft.

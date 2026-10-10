@@ -1,0 +1,89 @@
+PersistentFlight 0.17 experimental - flight plans across SOI changes
+
+Start the idle mission pilot as before. Focus the craft at normal time and
+create chronological map nodes, including a node on the incoming patch
+of the destination body. Open PF -> Mission actions and choose
+Queue flight plan across SOI changes. The normal Queue entire flight plan
+button retains its same-body behavior. Both require an idle pilot CPU.
+
+Example workflow: transfer burn around Kerbin, then a capture node on the
+planned Mun encounter patch. No transfer/capture nodes are generated for
+you. The map solver must already show the relevant future patches.
+
+The SOI plan saves up to 32 nodes and enables the normal recovery boot.
+It finishes a burn, keeps the next body-specific node queued, and waits
+with engines stopped until the craft reaches that node's reference body.
+It never computes a burn by subtracting velocities about different bodies.
+After arrival it recomputes the velocity correction against the SAVED
+post-burn target orbit; it preserves the planned burn time and objective.
+It does not optimize a new trajectory or guarantee an encounter/capture.
+
+Arrival checks require: the expected body, a loaded unpacked craft at 1x,
+a usable chemical-engine fuel estimate, enough fuel for the corrected
+burn, a target periapsis above atmosphere depth + 1 km (not a terrain scan), position
+error at burn time no more than 20 km, correction no more than the larger
+of 150% of planned delta-v or planned delta-v + 50 m/s, and at least the
+estimated full-throttle burn duration + 60 seconds until the node.
+A tiny correction below 0.5 m/s requires manual review too. Existing
+reserve forecasts remain advisory; insufficient total fuel holds arrival.
+
+A failed arrival check holds the mission and preserves the waiting node.
+Inspect it, cancel the saved plan, and create a revised map plan. Resume
+rechecks the same saved target; it cannot repair an incorrect trajectory.
+An unexpected intervening body holds the plan when its CPU is loaded.
+A sleeping craft must be visited to report that fault. Plans support
+consecutive direct body hops between burns, not unrecorded intermediate
+body passages such as Kerbin -> Sun -> Duna without a Sun-frame step.
+An overdue next burn holds the queue when the CPU loads, instead of
+executing it late.
+Changing body during an active burn also holds the retained request.
+
+Visit this craft automatically near its arrival burn is enabled by default
+for SOI plans. If the craft is unloaded after arriving at the expected
+body, PF performs its existing saved native travel to that craft within
+180 seconds of the next node. This changes your active vessel and creates
+PersistentFlight-Travel.sfs in the save. It lets the kOS recovery boot load
+and run the arrival burn. You can turn the option off and visit manually.
+The handoff only runs at normal time, with a 15-second retry spacing.
+It requires the game to stay in a flight scene. Sleeping CPUs are not
+executed on another celestial body by an independent distant live region.
+
+Coast warp leases now stop short of the next waiting node and an upcoming
+native SOI patch transition. Automatic travel does not advance time.
+Use the existing guarded warp controls; a packed CPU cannot renew its
+lease. The feature does not provide unattended high-warp travel from the
+tracking station or Space Center. Visit early for slow CPU/script startup.
+
+SOI status and automatic-visit preference persist with the CPU, along with
+its queue and recovery settings. Cancellation clears the entire saved
+plan. A waiting plan reserves its craft against a distant analytic burn.
+Close KSP before installing. Back up your complete save first. Do not
+open future-body queue saves with an older mod; restore a matching old
+save if downgrading. The four-field node format remains readable, but old
+versions do not understand the waiting/handoff rules.
+
+kOS commands:
+ ADDONS:PFR:QUEUESOIPLAN(): capture a future-body plan from map nodes.
+ ADDONS:PFR:SOIPLAN: whether an SOI plan is active.
+ ADDONS:PFR:SOISTATE: current SOI plan status.
+ ADDONS:PFR:SOITAKEOVER: read/write automatic arrival visit preference.
+ ADDONS:PFR:COASTUNTIL: current safe coast lease deadline.
+ QUEUECOUNT includes waiting nodes; NODEQUEUED is false while waiting.
+ CANCELNODE clears waiting plans as well as active burns.
+
+An event mission can send QUEUE_SOI_PLAN to the idle included pilot.
+Queue must be captured while that craft is focused at normal time.
+Timeline events: SOI_PLAN_WAITING, SOI_PLAN_READY, SOI_PLAN_HELD,
+SOI_PLAN_COMPLETED. Type these names into the event editor.
+
+Fuel panel: a plan containing future-body nodes shows a nominal budget
+using current vacuum engines. It must be rechecked after arrival;
+the arrival controller separately validates its corrected burn cost.
+Check map plan remains a same-body preflight check.
+
+Validation scope is in SOI-VALIDATION.json. The native new-feature test
+uses a natural Mun escape into Kerbin, real burns in both frames, a cold
+waiting-plan reload, an unloaded coast while observing another craft,
+and automatic native visit for the second burn. A Kerbin-to-Mun capture
+mission is not directly flown by that fixture. Safety thresholds, invalid
+arrival inputs and timing boundaries are checked independently.

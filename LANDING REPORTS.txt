@@ -1,0 +1,43 @@
+PersistentFlight 0.22 experimental — landing reports
+
+Approaches descending below 10 km above local terrain are observed for
+craft with a ModuleRegionalAutonomy and landing reports enabled. Toggle
+Record approach and touchdown report in Mission actions. No landing
+controller is added: your guidance still flies the craft and stock KSP
+provides ground/water contact. Landing takeover remains available.
+
+Flight debrief now includes landing reports alongside burn reports:
+* Ground/water contact location and selected-target surface distance.
+* Last observed speed before stock contact, with vertical/horizontal speed.
+* Remaining LiquidFuel, Oxidizer and ElectricCharge, plus lost part count.
+* Settled touchdown, part loss, destroyed craft, or interrupted observation.
+The CSV contains these measurements and target-availability explanations.
+
+Contact is confirmed by native KSP LandedOrSplashed and observed for two
+seconds to include immediate part loss. Resource/location values reflect
+the settling window; speed is the last pre-contact sample, not a collision
+impulse measurement. Lost parts compares original part IDs with survivors;
+it is not an assessment of every possible mod's damage system. A destroyed
+recorder or vessel can leave a partial report. Dead-vessel telemetry does
+not replace the last live speed/resource measurements. Unknown resource
+values show Unavailable and export as empty CSV cells. Reports never
+change thrust.
+
+Saved open approaches close as Interrupted: save reloaded during approach.
+Packed/unloaded craft, time warp and scene changes close partial observation.
+Bouncing or leaving before settling is reported as interrupted. A later
+observed descent may create another approach report. Already landed craft
+do not create a report merely because a save was loaded. Missing/wrong-body
+surface targets show unavailable distance; no substitute target is invented.
+Target distance is great-circle surface distance, not deck collision error.
+
+Save format 2 loads previous burn reports from format 1. New landing fields
+are persisted with strict validation. Unsupported/damaged history retains
+the existing recording hold and evidence preservation behavior. Landings
+share the existing 1,000-report history and whole-game recovery branches.
+
+LANDING-VALIDATION.json records the actual tests and their limits. Ground
+and water tests use native falling craft/contact, without setting a landed
+flag. Hard-impact tests use native collisions. Carrier-deck landings,
+precision guidance, magnetic capture and all third-party damage models are
+outside this release's test coverage.

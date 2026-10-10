@@ -1,0 +1,73 @@
+PersistentFlight 0.18 experimental — flight debriefs
+
+Open PF -> Flight debrief to review recent maneuver and background burns.
+Recording starts automatically when a burn is captured. It is independent
+of the craft's Record this craft toggle, which controls the sample CSV.
+
+Each report identifies the craft, CPU (for live maneuvers), starting body,
+scheduled node time, planned delta-v, powered time, final residual,
+resource changes and outcome. Queued, complete, cancelled, stopped and
+held attempts remain visible. A resumed held maneuver starts a new attempt
+when its burn window begins. Waiting future-body nodes get reports when
+they become active, preserving the body used by each burn.
+
+WHAT THE NUMBERS MEAN
+
+Live maneuver impulse is an ESTIMATE: scalar actual engine thrust divided
+by vessel mass, integrated after each normal-time physics step during the
+pilot's burn window. It includes all firing vessel engines, including
+off-axis thrust; it excludes RCS. It is neither a vector impulse nor a
+guarantee that the planned trajectory was reached. Use the separately
+reported final target residual to assess execution. Small sampling errors
+are expected. Old copied/custom pilots should call PFR:BEGINBURN() just
+before their powered burn to enable this measurement.
+
+Live resource figures are beginning-minus-ending amounts of LiquidFuel,
+Oxidizer and ElectricCharge across the whole vessel during the powered
+window. Other consumers, generation, transfers and refuelling affect them.
+Negative figures mean a net increase. They are not engine-only fuel use.
+An unobserved or never-started window has unavailable resource values,
+rather than fabricated zero consumption. Other propellants are not shown.
+
+Background impulse is the analytic burn model's delivered delta-v.
+Background resource figures are actual debits committed by that model;
+the final residual is planned-minus-delivered delta-v, not a native map
+target comparison. Old partially executed jobs first observed by 0.18 are
+marked partial because earlier withdrawals were not recorded.
+
+SAVE, EXPORT AND LIMITS
+
+History lives in the game save, capped at 1,000 reports. The oldest finished
+report is removed first; active reports are protected. Export the CSV to
+keep a longer history. The export is written under
+PersistentFlight/FlightLogs/Debriefs, and its path is copied to the clipboard.
+Blank numeric CSV cells mean unavailable. Measurement-basis columns keep
+live estimates and net resource changes distinct from analytic accounting.
+
+Quickloading restores the history from that save; it does not combine
+alternate playthroughs. Stable report IDs avoid duplicate completion and
+cancellation records. Each restored ledger gets a new export branch ID;
+the report's origin branch is retained. Compare exports by branch as well
+as report ID when exploring different outcomes after a quickload.
+
+A live burn restored while already burning is marked partial because the
+observer cannot guarantee an uninterrupted physics window across reload.
+Packed/high-warp sampling or a long physics step also marks it partial.
+The original resource snapshot is retained for the matching saved vessel.
+
+Damaged or unsupported debrief save data preserves its original nodes and
+holds debrief recording with an on-screen message. This observer does not
+hold flight guidance, event missions or background burns. Restore a verified
+save to recover recording. No debrief system changes throttle or steering.
+
+This release reviews burn execution. It does not reconstruct earlier flight
+history, predict landings, calculate touchdown accuracy, or record every
+manual/custom-engine burn automatically. Existing flight sample logs and
+the event timeline remain available.
+
+INSTALL
+
+Close KSP, extract the complete ZIP and run Install.cmd. Upgrade directly
+from 0.17. Back up the complete save first. Uninstall.cmd restores the prior
+payload unless a file was edited. Restore a matching pre-upgrade save when
+downgrading to retain consistent flight state and the older history schema.
